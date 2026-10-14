@@ -1,0 +1,20 @@
+# Godot imports and editor state (regenerated locally).
+.godot/
+*.tmp
+*.log
+
+# Exported games and local credentials.
+builds/
+exports/
+export_credentials.cfg
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+
+# OS/editor files.
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

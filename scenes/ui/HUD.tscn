@@ -1,0 +1,175 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="StatsPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 360.0
+offset_bottom = 248.0
+mouse_filter = 2
+
+[node name="Stats" type="VBoxContainer" parent="Root/StatsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Root/StatsPanel/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.62, 1)
+theme_override_font_sizes/font_size = 26
+text = "TINY KINGDOM"
+
+[node name="LevelText" type="Label" parent="Root/StatsPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.79, 0.73, 1)
+theme_override_font_sizes/font_size = 15
+text = "NÍVEL 01"
+
+[node name="HealthText" type="Label" parent="Root/StatsPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "VIDA"
+
+[node name="HealthBar" type="ProgressBar" parent="Root/StatsPanel/Stats"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+mouse_filter = 2
+show_percentage = false
+
+[node name="XPText" type="Label" parent="Root/StatsPanel/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "XP"
+
+[node name="XPBar" type="ProgressBar" parent="Root/StatsPanel/Stats"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+show_percentage = false
+
+[node name="SuppliesPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -302.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 250.0
+grow_horizontal = 0
+mouse_filter = 2
+
+[node name="Supplies" type="VBoxContainer" parent="Root/SuppliesPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/SuppliesPanel/Supplies"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.62, 1)
+theme_override_font_sizes/font_size = 17
+text = "RESERVAS DO REINO"
+
+[node name="ResourceText" type="Label" parent="Root/SuppliesPanel/Supplies"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Madeira   000\nPedra       000\nOuro         000"
+
+[node name="Separator" type="HSeparator" parent="Root/SuppliesPanel/Supplies"]
+layout_mode = 2
+
+[node name="ObjectiveText" type="Label" parent="Root/SuppliesPanel/Supplies"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.79, 0.73, 1)
+theme_override_font_sizes/font_size = 14
+text = "PROTEJA A CLAREIRA"
+
+[node name="Toast" type="Label" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 280.0
+offset_bottom = 316.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_shadow_color = Color(0.07, 0.15, 0.13, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 21
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Root"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -54.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.82, 1)
+theme_override_colors/font_shadow_color = Color(0.05, 0.12, 0.1, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 17
+text = "WASD / SETAS   mover     ·     ATAQUE AUTOMÁTICO   aproxime-se     ·     R   recomeçar"
+horizontal_alignment = 1
+
+[node name="ResultPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -70.0
+offset_right = 260.0
+offset_bottom = 170.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Result" type="VBoxContainer" parent="Root/ResultPanel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="ResultTitle" type="Label" parent="Root/ResultPanel/Result"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.62, 1)
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1
+
+[node name="ResultDescription" type="Label" parent="Root/ResultPanel/Result"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="Root/ResultPanel/Result"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "Recomeçar a expedição  [R]"
