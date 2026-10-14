@@ -20,12 +20,6 @@ func _draw() -> void:
 		440, 25, Color("e8d5a2"))
 	draw_string(font, Vector2(420, 155), "Explore. Retorne. Guarde seu futuro.", HORIZONTAL_ALIGNMENT_CENTER,
 		440, 18, Color("b4c7ad"))
-	for center in [Vector2(190, 525), Vector2(1090, 525)]:
-		draw_rect(Rect2(center - Vector2(60, 42), Vector2(120, 84)), Color("93a482"), false, 2)
-		draw_line(center - Vector2(50, 32), center + Vector2(50, 32), Color("607960"), 1)
-		draw_line(center + Vector2(-50, 32), center + Vector2(50, -32), Color("607960"), 1)
-		draw_string(font, center + Vector2(-90, 68), "CONSTRUÇÃO FUTURA", HORIZONTAL_ALIGNMENT_CENTER,
-			180, 14, Color("a8b99c"))
 	for point in [Vector2(90, 320), Vector2(1160, 310), Vector2(340, 610), Vector2(900, 600)]:
 		_draw_tree(point)
 	_draw_rock(Vector2(720, 600))

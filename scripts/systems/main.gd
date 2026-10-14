@@ -29,6 +29,8 @@ func _ready() -> void:
 	player.died.connect(_on_player_died)
 	player.interaction.prompt_changed.connect(hud.set_interaction_prompt)
 	hud.reset_requested.connect(reset_progress)
+	hud.building_panel.purchase_requested.connect(_on_purchase_requested)
+	game_state.weapon_upgraded.connect(_on_weapon_upgraded)
 	hud.bind_player(player)
 	_load_map(true)
 
@@ -54,7 +56,9 @@ func _load_map(village: bool) -> void:
 	var map := (VILLAGE_SCENE if village else WORLD_SCENE).instantiate()
 	$Map.add_child(map)
 	for object in map.get_children():
-		if object is KingdomInteractable:
+		if object is VillageBuilding:
+			object.interacted.connect(_on_building_interacted.bind(object))
+		elif object is KingdomInteractable:
 			object.interacted.connect(_on_interacted.bind(object.action))
 	player.position = Vector2(640, 440) if village else Vector2(600, 900)
 	player.apply_progress(game_state.progression, game_state.expedition_resources)
@@ -76,6 +80,34 @@ func _load_map(village: bool) -> void:
 	if not village:
 		hud.update_objective(remaining_enemies, ENEMY_POSITIONS.size())
 	transitioning = false
+
+
+func _on_building_interacted(_actor: KingdomPlayer, building: VillageBuilding) -> void:
+	if in_village and not transitioning and not dying and player.is_alive():
+		hud.building_panel.open(building.building_id)
+
+
+func _on_purchase_requested(id: String, action: String, expected_level: int) -> void:
+	if not in_village or transitioning or dying or not player.is_alive():
+		return
+	var nearby := false
+	for building in get_tree().get_nodes_in_group("buildings"):
+		if building.building_id == id and building.can_interact(player):
+			nearby = true
+	if not nearby:
+		hud.building_panel.show_error("Aproxime-se do terreno para construir.")
+		return
+	if game_state.purchase_building(id, action, expected_level):
+		hud.building_panel.close()
+		hud.show_message(game_state.action_message)
+	else:
+		hud.building_panel.show_error(game_state.action_message)
+
+
+func _on_weapon_upgraded() -> void:
+	# The save already contains total damage; assign it, never add the bonus again.
+	player.damage = game_state.progression.damage
+	player.stats_changed.emit()
 
 
 func _on_interacted(_actor: KingdomPlayer, action: String) -> void:

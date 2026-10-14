@@ -20,6 +20,7 @@ var in_village := true
 @onready var result_panel: PanelContainer = %ResultPanel
 @onready var result_title: Label = %ResultTitle
 @onready var result_description: Label = %ResultDescription
+@onready var building_panel: BuildingPanel = %BuildingPanel
 
 
 func _ready() -> void:
@@ -66,6 +67,7 @@ func refresh() -> void:
 	%CarryingText.text = "Carregando: M %d · P %d · O %d" % [
 		player.resources["wood"], player.resources["stone"], player.resources["gold"]]
 	if in_village:
+		%SuppliesTitle.text = "ARMAZENADO · Vila Nv. %d" % game_state.building_level("town_hall")
 		objective_text.text = "VILA · EXPEDIÇÕES CONCLUÍDAS: %d\nDeposite antes de partir novamente." % game_state.expeditions_completed
 
 
@@ -100,7 +102,7 @@ func _on_save_status(text: String) -> void:
 
 
 func confirm_reset() -> void:
-	if OS.is_debug_build() and not %ResetConfirmation.visible:
+	if OS.is_debug_build() and not %ResetConfirmation.visible and not building_panel.visible:
 		get_tree().paused = true
 		%ResetConfirmation.popup_centered()
 

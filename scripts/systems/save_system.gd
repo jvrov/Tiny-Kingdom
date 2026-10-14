@@ -2,7 +2,7 @@ class_name SaveSystem
 extends RefCounted
 ## Versioned, validated JSON. A failed write never replaces the last good file.
 
-const VERSION := 1
+const VERSION := 2
 const DEFAULT_PATH := "user://save.json"
 const MAX_VALUE := 1000000000
 var path: String
@@ -20,7 +20,9 @@ static func defaults() -> Dictionary:
 		"version": VERSION,
 		"resources": {"wood": 0, "stone": 0, "gold": 0},
 		"player": {"level": 1, "xp": 0, "max_health": 100, "damage": 18},
-		"expeditions_completed": 0
+		"expeditions_completed": 0,
+		"buildings": BuildingData.default_state(),
+		"weapon_level": 0
 	}
 
 
@@ -46,11 +48,12 @@ func load_data() -> Dictionary:
 	if error != OK or not json.data is Dictionary:
 		return _recover_corrupt()
 	var data: Dictionary = json.data
-	if _integer(data.get("version"), 1, MAX_VALUE) and int(data.version) != VERSION:
+	var legacy := _integer(data.get("version"), 1, 1)
+	if _integer(data.get("version"), 1, MAX_VALUE) and int(data.version) not in [1, VERSION]:
 		write_blocked = true
 		message = "Versão de save incompatível. Arquivo preservado; gravação bloqueada."
 		return defaults()
-	if not valid_data(data):
+	if not (_valid_common(data, 1) if legacy else valid_data(data)):
 		return _recover_corrupt()
 	# JSON numbers arrive as floats; normalize before using them in gameplay.
 	var normalized := defaults()
@@ -59,6 +62,20 @@ func load_data() -> Dictionary:
 	for key in normalized.player:
 		normalized.player[key] = int(data.player[key])
 	normalized.expeditions_completed = int(data.expeditions_completed)
+	if legacy:
+		# Load all v1 values unchanged. New fields start empty; damage is already total.
+		var backup := path + ".v1-" + str(Time.get_unix_time_from_system()).replace(".", "-") + ".bak"
+		if DirAccess.copy_absolute(path, backup) != OK:
+			write_blocked = true
+			message = "Save v1 carregado, mas o backup falhou. Migração e gravação bloqueadas."
+		else:
+			needs_save = true
+	else:
+		normalized.weapon_level = int(data.weapon_level)
+		for id in BuildingData.IDS:
+			normalized.buildings[id].level = int(data.buildings[id].level)
+			for axis in ["x", "y"]:
+				normalized.buildings[id].position[axis] = int(data.buildings[id].position[axis])
 	return normalized
 
 
@@ -81,7 +98,31 @@ static func _integer(value: Variant, minimum: int, maximum: int) -> bool:
 
 
 static func valid_data(data: Dictionary) -> bool:
-	if not _integer(data.get("version"), VERSION, VERSION):
+	if not _valid_common(data, VERSION):
+		return false
+	if not data.get("buildings") is Dictionary or data.buildings.size() != BuildingData.IDS.size():
+		return false
+	for id in BuildingData.IDS:
+		var entry: Variant = data.buildings.get(id)
+		if not entry is Dictionary or not _integer(entry.get("level"), 0, BuildingData.DEFINITIONS[id].max_level):
+			return false
+		if not entry.get("position") is Dictionary:
+			return false
+		for axis in ["x", "y"]:
+			var fixed: int = BuildingData.DEFINITIONS[id].position[axis]
+			if not _integer(entry.position.get(axis), fixed, fixed):
+				return false
+	if not _integer(data.get("weapon_level"), 0, BuildingData.MAX_WEAPON_LEVEL):
+		return false
+	if data.buildings.town_hall.level == 0 and (data.buildings.blacksmith.level > 0 or data.buildings.archer_tower.level > 0):
+		return false
+	if data.weapon_level > 0 and data.buildings.blacksmith.level == 0:
+		return false
+	return data.player.damage > BuildingData.weapon_bonus(int(data.weapon_level))
+
+
+static func _valid_common(data: Dictionary, version: int) -> bool:
+	if not _integer(data.get("version"), version, version):
 		return false
 	if not data.get("resources") is Dictionary or not data.get("player") is Dictionary:
 		return false

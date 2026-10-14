@@ -16,6 +16,7 @@ export_credentials.cfg
 # Local gameplay saves, if manually copied into the checkout.
 save.json
 save.json.corrupt-*
+save.json.v1-*.bak
 
 # OS/editor files.
 .DS_Store

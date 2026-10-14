@@ -96,7 +96,7 @@ func _test_save_validation() -> void:
 	_expect(corrupt.load_data() == SaveSystem.defaults(), "wrong nested types are rejected safely")
 	var future := SaveSystem.new(test_directory + "/future.json")
 	var future_data := data.duplicate(true)
-	future_data.version = 2
+	future_data.version = SaveSystem.VERSION + 1
 	var future_text := JSON.stringify(future_data)
 	_write(future.path, future_text)
 	_expect(future.load_data() == SaveSystem.defaults() and future.write_blocked,

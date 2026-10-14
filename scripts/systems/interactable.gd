@@ -4,7 +4,7 @@ extends Node2D
 
 signal interacted(actor: KingdomPlayer)
 
-@export_enum("deposit", "depart", "return") var action: String = "deposit"
+@export_enum("deposit", "depart", "return", "building") var action: String = "deposit"
 @export var prompt := "Depositar recursos"
 @export var interaction_range: float = 90.0
 

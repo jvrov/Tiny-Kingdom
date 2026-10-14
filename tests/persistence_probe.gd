@@ -29,6 +29,14 @@ func _run() -> void:
 	for key in ["level", "xp", "max_health", "damage"]:
 		matches = matches and actual.player[key] == expected.player[key]
 	matches = matches and main.in_village and main.player.level == expected.player.level
+	matches = matches and main.player.damage == expected.player.damage
+	matches = matches and actual.weapon_level == expected.weapon_level
+	for id in BuildingData.IDS:
+		matches = matches and actual.buildings[id].level == expected.buildings[id].level
+		for axis in ["x", "y"]:
+			matches = matches and actual.buildings[id].position[axis] == expected.buildings[id].position[axis]
+	for building in get_nodes_in_group("buildings"):
+		matches = matches and building.level == expected.buildings[building.building_id].level
 	matches = matches and get_nodes_in_group("player").size() == 1
 	if not matches:
 		print("Persistence mismatch: actual=", actual, " expected=", expected)

@@ -4,6 +4,7 @@ extends Node
 
 signal changed
 signal save_status_changed(message: String)
+signal weapon_upgraded
 
 var village_resources: Dictionary = {"wood": 0, "stone": 0, "gold": 0}
 var expedition_resources: Dictionary = {"wood": 0, "stone": 0, "gold": 0}
@@ -13,6 +14,9 @@ var expedition_active := false
 var initialized := false
 var save_status := ""
 var storage: SaveSystem
+var buildings: Dictionary = BuildingData.default_state()
+var weapon_level := 0
+var action_message := ""
 
 
 func initialize(save_path: String = SaveSystem.DEFAULT_PATH) -> void:
@@ -20,9 +24,7 @@ func initialize(save_path: String = SaveSystem.DEFAULT_PATH) -> void:
 		return
 	storage = SaveSystem.new(save_path)
 	var data := storage.load_data()
-	village_resources = data.resources.duplicate()
-	progression = data.player.duplicate()
-	expeditions_completed = data.expeditions_completed
+	_apply_permanent(data)
 	initialized = true
 	var load_message := storage.message
 	if storage.needs_save:
@@ -37,8 +39,119 @@ func snapshot() -> Dictionary:
 		"version": SaveSystem.VERSION,
 		"resources": village_resources.duplicate(),
 		"player": progression.duplicate(),
-		"expeditions_completed": expeditions_completed
+		"expeditions_completed": expeditions_completed,
+		"buildings": buildings.duplicate(true),
+		"weapon_level": weapon_level
 	}
+
+
+func _apply_permanent(data: Dictionary) -> void:
+	village_resources = data.resources.duplicate()
+	progression = data.player.duplicate()
+	expeditions_completed = data.expeditions_completed
+	buildings = data.buildings.duplicate(true)
+	weapon_level = data.weapon_level
+
+
+func building_level(id: String) -> int:
+	return int(buildings[id].level) if buildings.has(id) else 0
+
+
+func can_afford(cost: Dictionary) -> bool:
+	if cost.is_empty():
+		return false
+	for key in cost:
+		if not village_resources.has(key) or not cost[key] is int or cost[key] < 0:
+			return false
+		if village_resources[key] < cost[key]:
+			return false
+	return true
+
+
+func spend_resources(cost: Dictionary) -> bool:
+	return _commit_economy(cost, snapshot())
+
+
+func _commit_economy(cost: Dictionary, next: Dictionary) -> bool:
+	if expedition_active:
+		action_message = "Retorne à vila para construir."
+		return false
+	if not can_afford(cost):
+		action_message = "Recursos insuficientes"
+		return false
+	for key in cost:
+		next.resources[key] -= cost[key]
+	# Stage the complete transaction on a copy. Nothing live changes before commit.
+	if not storage.save_data(next):
+		_set_status(storage.message)
+		action_message = "Não foi possível salvar. Recursos e melhorias foram mantidos."
+		return false
+	_apply_permanent(next)
+	_set_status("")
+	changed.emit()
+	return true
+
+
+func building_offer(id: String) -> Dictionary:
+	var data := BuildingData.definition(id)
+	if data.is_empty():
+		return {}
+	var level := building_level(id)
+	var offer := {
+		"id": id, "name": data.name, "description": data.description,
+		"level": level, "action": "none", "expected_level": level,
+		"cost": {}, "button": "Construído", "reason": "Nível máximo desta construção.",
+		"enabled": false
+	}
+	if level == 0:
+		offer.action = "build"
+		offer.cost = data.cost
+		offer.button = "Construir"
+		offer.reason = "Construa a Prefeitura primeiro." if id != "town_hall" and building_level("town_hall") == 0 else ""
+	elif id == "blacksmith":
+		offer.expected_level = weapon_level
+		offer.description += "\nArma Nv. %d / 3 · Bônus total: +%d dano" % [weapon_level, BuildingData.weapon_bonus(weapon_level)]
+		if weapon_level < BuildingData.MAX_WEAPON_LEVEL:
+			offer.action = "upgrade"
+			offer.cost = BuildingData.weapon_cost(weapon_level + 1)
+			offer.button = "Melhorar arma · Nv. %d" % (weapon_level + 1)
+			offer.description += "\nPróxima melhoria: +%d dano permanente" % (BuildingData.weapon_bonus(weapon_level + 1) - BuildingData.weapon_bonus(weapon_level))
+			offer.reason = ""
+		else:
+			offer.reason = "Arma no nível máximo."
+	if offer.action != "none" and offer.reason.is_empty():
+		if not can_afford(offer.cost):
+			offer.reason = "Recursos insuficientes"
+		elif expedition_active:
+			offer.reason = "Retorne à vila para construir."
+		elif storage != null and storage.write_blocked:
+			offer.reason = save_status
+		offer.enabled = offer.reason.is_empty()
+	return offer
+
+
+func purchase_building(id: String, action: String, expected_level: int) -> bool:
+	var offer := building_offer(id)
+	if offer.is_empty() or action == "none" or offer.action != action or offer.expected_level != expected_level:
+		action_message = "Essa melhoria já mudou. Abra o painel novamente."
+		return false
+	if not offer.enabled:
+		action_message = offer.reason
+		return false
+	var next := snapshot()
+	if action == "build":
+		next.buildings[id].level = 1
+	else:
+		next.weapon_level = weapon_level + 1
+		next.player.damage += BuildingData.weapon_bonus(weapon_level + 1) - BuildingData.weapon_bonus(weapon_level)
+	if not _commit_economy(offer.cost, next):
+		return false
+	if action == "upgrade":
+		action_message = "Arma melhorada para nível %d! Bônus total: +%d dano." % [weapon_level, BuildingData.weapon_bonus(weapon_level)]
+		weapon_upgraded.emit()
+	else:
+		action_message = "%s construída!" % offer.name if id != "blacksmith" else "Ferreiro construído!"
+	return true
 
 
 func persist() -> bool:
@@ -112,8 +225,7 @@ func reset_progress() -> bool:
 		_set_status(storage.message)
 		return false
 	var data := SaveSystem.defaults()
-	village_resources = data.resources
-	progression = data.player
+	_apply_permanent(data)
 	expedition_resources = {"wood": 0, "stone": 0, "gold": 0}
 	expeditions_completed = 0
 	expedition_active = false

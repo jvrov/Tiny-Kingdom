@@ -28,13 +28,20 @@
 - [x] Reset F9 exclusivo de desenvolvimento, com confirmação.
 - [x] Testes de persistência, depósito, morte, transições e reabertura do jogo.
 
-A defesa por ondas e a construção funcional continuam na Fase 3.
+O save v1 da Fase 2 é migrado automaticamente para v2 na Fase 3.
 
 ## Fase 3 — Construções
 
-- [ ] Posicionamento, custos, validação e melhoria de construções.
-- [ ] Prefeitura, casas, muralhas e torres.
-- [ ] Vida das estruturas e ondas de defesa.
+- [x] Três terrenos fixos com arquitetura reutilizável e visuais distintos.
+- [x] Painel de construção/melhoria por E, confirmação por Enter/botão e cancelamento por Esc.
+- [x] Economia central, custos e transações seguras diante de falha de save.
+- [x] Prefeitura nível 1, HUD de nível da vila e desbloqueio de Ferreiro/Torre.
+- [x] Ferreiro com três melhorias permanentes de arma (+3, +4, +5).
+- [x] Torre com alvo mais próximo, alcance, dano, cooldown e efeito de ataque.
+- [x] Persistência v2 de construções/posições/arma e migração v1 preservando progresso.
+- [x] 134 verificações anteriores preservadas e 85 novas aprovadas.
+
+Escopo desta fase concluído. Posicionamento livre, casas, muralhas, vida das estruturas e ondas completas foram adiados; não fazem parte desta entrega.
 
 ## Fase 4 — Inventário e equipamentos
 
