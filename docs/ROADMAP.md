@@ -9,17 +9,26 @@
 - [x] Ataque automático ao alvo mais próximo com cooldown e feedback visual.
 - [x] Vida, experiência, níveis e aumento de atributos.
 - [x] Madeira, pedra e ouro com drops diretos no estoque.
-- [x] HUD atualizado por sinais, objetivo, vitória, derrota e reinício.
+- [x] HUD atualizado por sinais, objetivo, vitória e derrota (agora integrados ao retorno à vila).
 - [x] Mapa explorável com placeholders e terreno reservado à vila.
 - [x] Adaptador de input preparado para receber joystick virtual.
 - [x] Testes de integração do fluxo jogável.
 
 ## Fase 2 — Vila
 
-- [x] Demarcação visual da região da futura vila.
-- [ ] Estado da vila, área de construção e pontos de interação.
-- [ ] Depósito de recursos e salvamento local versionado.
-- [ ] Retorno à vila e ciclo entre exploração e defesa.
+- [x] Cena própria de vila com praça, depósito, portal e espaços visuais para construções futuras.
+- [x] GameState central com estoque permanente, carga temporária e progressão.
+- [x] Save JSON v1 em user://, criação/leitura automáticas e validação contra corrupção.
+- [x] Depósito transacional com salvamento automático e feedback de falha/sucesso.
+- [x] Interação reutilizável por E, pronta para botão mobile.
+- [x] Ciclo vila → expedição → combate → retorno → depósito → nova expedição.
+- [x] Morte com perda da carga, manutenção da progressão e retorno curado à vila.
+- [x] HUD distinguindo Carregando/Armazenado e contador de expedições concluídas.
+- [x] Spawn e câmera por mapa sem duplicar jogador.
+- [x] Reset F9 exclusivo de desenvolvimento, com confirmação.
+- [x] Testes de persistência, depósito, morte, transições e reabertura do jogo.
+
+A defesa por ondas e a construção funcional continuam na Fase 3.
 
 ## Fase 3 — Construções
 

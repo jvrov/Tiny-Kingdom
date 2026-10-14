@@ -44,9 +44,9 @@ func _draw() -> void:
 	for index in range(4):
 		draw_dashed_line(corners[index], corners[(index + 1) % 4], Color("abaf7d"), 2, 10)
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(370, 708), "FUTURA VILA", HORIZONTAL_ALIGNMENT_LEFT,
+	draw_string(font, Vector2(370, 708), "POSTO DE RETORNO", HORIZONTAL_ALIGNMENT_LEFT,
 		-1, 20, Color("ded9af"))
-	draw_string(font, Vector2(370, 735), "Um pequeno reino começa aqui.",
+	draw_string(font, Vector2(370, 735), "Volte ao marco para guardar seus recursos.",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("a8b9a4"))
 	draw_string(font, Vector2(1480, 490), "CLAREIRA DOS ERRANTES", HORIZONTAL_ALIGNMENT_LEFT,
 		-1, 22, Color("a3bba5"))

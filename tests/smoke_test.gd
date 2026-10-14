@@ -7,6 +7,7 @@ const PLAYER := preload("res://scenes/player/Player.tscn")
 const ENEMY := preload("res://scenes/enemies/Enemy.tscn")
 const WORLD := preload("res://scenes/world/World.tscn")
 
+var game_state: Node
 var checks := 0
 var failures := 0
 
@@ -16,13 +17,16 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	game_state = root.get_node("GameState")
+	game_state.initialize("user://tests/smoke_%d.json" % OS.get_process_id())
 	_test_input_bindings()
 	await _test_scene_hud_and_progression()
 	await _test_movement_and_boundaries()
 	await _test_automatic_combat()
 	await _test_enemy_behavior()
-	await _test_death_and_restart()
+	await _test_death_and_return()
 	print("Tiny Kingdom: %d checks, %d passed, %d failed" % [checks, checks - failures, failures])
+	game_state.storage.erase()
 	quit(1 if failures > 0 else 0)
 
 
@@ -57,6 +61,8 @@ func _test_input_bindings() -> void:
 			if event is InputEventKey:
 				actual.append(event.physical_keycode)
 		_expect(actual == keys[action], action + " binds WASD and arrows")
+	_expect(InputMap.action_get_events("interact")[0].physical_keycode == KEY_E, "E is bound to interaction")
+	_expect(InputMap.action_get_events("debug_reset")[0].physical_keycode == KEY_F9, "F9 is bound to development reset")
 	var source := MovementInput.new()
 	root.add_child(source)
 	Input.action_press("move_right")
@@ -74,15 +80,19 @@ func _test_input_bindings() -> void:
 
 
 func _test_scene_hud_and_progression() -> void:
+	game_state.reset_progress()
 	var main := MAIN.instantiate()
 	root.add_child(main)
+	main.start_expedition()
+	await _frames(2)
 	var player: KingdomPlayer = main.player
 	var hud: KingdomHUD = main.hud
 	player.set_physics_process(false)
 	for enemy in get_nodes_in_group("enemies"):
 		enemy.set_physics_process(false)
 	_expect(get_nodes_in_group("enemies").size() == 12, "main spawns 12 enemies")
-	_expect(main.get_node("World").get_child_count() == 4, "map has four collision boundaries")
+	var walls := main.get_node("Map/World").get_children().filter(func(node): return node is StaticBody2D)
+	_expect(walls.size() == 4, "map has four collision boundaries")
 	_expect(player.get_node("Camera2D").enabled, "player has an enabled follow camera")
 	_expect(hud.health_bar.value == 100 and hud.xp_bar.value == 0, "HUD binds initial health and XP")
 	player.take_damage(20)
@@ -105,8 +115,9 @@ func _test_scene_hud_and_progression() -> void:
 		and player.experience == 15 and player.current_health == 130, "invalid rewards and negative damage are ignored")
 	for enemy in get_nodes_in_group("enemies"):
 		enemy.take_damage(1000, player)
-	_expect(main.remaining_enemies == 0 and main.finished, "clearing every enemy completes expedition")
-	_expect(hud.result_panel.visible and hud.result_title.text == "Clareira protegida!", "victory is displayed")
+	_expect(main.remaining_enemies == 0 and main.finished, "clearing every enemy completes combat objective")
+	_expect(hud.toast.text.contains("Clareira protegida!") and not hud.result_panel.visible,
+		"victory directs the player to the return point without blocking movement")
 	_expect(hud.objective_text.text.contains("12 / 12"), "objective counts defeated enemies")
 	await _discard(main)
 
@@ -223,11 +234,16 @@ func _test_enemy_behavior() -> void:
 	await _discard(arena)
 
 
-func _test_death_and_restart() -> void:
+func _test_death_and_return() -> void:
+	game_state.reset_progress()
 	var main := MAIN.instantiate()
 	root.add_child(main)
 	current_scene = main
+	main.start_expedition()
+	await _frames(2)
 	var player: KingdomPlayer = main.player
+	player.gain_experience(30)
+	player.add_resource("gold", 7)
 	var death_count := [0]
 	player.died.connect(func(): death_count[0] += 1)
 	player.take_damage(1000)
@@ -236,18 +252,20 @@ func _test_death_and_restart() -> void:
 	player.add_resource("gold", 100)
 	_expect(player.current_health == 0 and death_count[0] == 1, "health clamps to zero and death emits once")
 	_expect(player.experience == 0 and player.resources["gold"] == 0, "dead player cannot earn rewards")
-	_expect(main.hud.result_panel.visible and main.finished, "death displays restart screen")
+	_expect(main.hud.result_panel.visible and main.dying, "death displays expedition failure")
 	player.movement_input.set_virtual_direction(Vector2.RIGHT)
 	var position_before := player.position
 	await _frames(5)
 	_expect(player.position == position_before, "dead player cannot move")
-	main.hud.get_node("Root/ResultPanel/Result/RestartButton").pressed.emit()
-	await _frames(5)
-	_expect(current_scene != null and current_scene != main, "restart button reloads main scene")
-	var restarted := current_scene
-	_expect(restarted.player.current_health == 100 and restarted.player.level == 1,
-		"restart resets player health and progression")
-	_expect(get_nodes_in_group("enemies").size() == 12 and not restarted.hud.result_panel.visible,
-		"restart restores enemies and hides result screen")
+	await _frames(130)
+	_expect(main.in_village and not main.dying, "death automatically returns to village")
+	_expect(player.current_health == 115 and player.level == 2,
+		"return restores health and preserves progression")
+	_expect(get_nodes_in_group("enemies").is_empty() and not main.hud.result_panel.visible,
+		"village removes enemies and hides failure screen")
+	main.start_expedition()
+	await _frames(2)
+	_expect(get_nodes_in_group("enemies").size() == 12 and player.level == 2,
+		"new expedition restores enemies without resetting progression")
 	current_scene = null
-	await _discard(restarted)
+	await _discard(main)

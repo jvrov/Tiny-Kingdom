@@ -23,6 +23,22 @@ var _attack_point := Vector2.ZERO
 var _facing := Vector2.RIGHT
 
 @onready var movement_input: MovementInput = $MovementInput
+@onready var interaction: InteractionController = $InteractionController
+
+
+func apply_progress(progress: Dictionary, cargo: Dictionary) -> void:
+	level = progress.level
+	experience = progress.xp
+	max_health = progress.max_health
+	damage = progress.damage
+	resources = cargo.duplicate()
+	current_health = max_health
+	velocity = Vector2.ZERO
+	_attack_remaining = 0.0
+	_attack_flash = 0.0
+	_hurt_flash = 0.0
+	movement_input.clear_virtual_direction()
+	stats_changed.emit()
 
 
 func _ready() -> void:

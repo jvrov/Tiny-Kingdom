@@ -1,12 +1,14 @@
 class_name KingdomHUD
 extends CanvasLayer
 
-signal restart_requested
+signal reset_requested
 
 const RESOURCE_NAMES := {"wood": "Madeira", "stone": "Pedra", "gold": "Ouro"}
 var player: KingdomPlayer
 var _toast_remaining: float = 0.0
+var in_village := true
 
+@onready var game_state: Node = get_node("/root/GameState")
 @onready var health_bar: ProgressBar = %HealthBar
 @onready var xp_bar: ProgressBar = %XPBar
 @onready var health_text: Label = %HealthText
@@ -27,12 +29,16 @@ func _ready() -> void:
 	result_panel.add_theme_stylebox_override("panel", panel)
 	_style_bar(health_bar, Color("8fcca8"))
 	_style_bar(xp_bar, Color("78b4e2"))
-	%RestartButton.add_theme_stylebox_override("normal",
-		_panel_style(Color("3a5c51"), Color("91b39b")))
-	%RestartButton.add_theme_stylebox_override("hover",
-		_panel_style(Color("4a7564"), Color("d9cea1")))
-	%RestartButton.add_theme_font_size_override("font_size", 20)
-	%RestartButton.pressed.connect(func(): restart_requested.emit())
+	%ResetConfirmation.canceled.connect(func(): get_tree().paused = false)
+	%ResetConfirmation.confirmed.connect(func():
+		get_tree().paused = false
+		reset_requested.emit())
+	game_state.changed.connect(refresh)
+	game_state.save_status_changed.connect(_on_save_status)
+	_on_save_status(game_state.save_status)
+	%Hint.text = "WASD / SETAS   mover     ·     E   interagir     ·     ATAQUE AUTOMÁTICO"
+	if OS.is_debug_build():
+		%Hint.text += "     ·     F9   reset (dev)"
 
 
 func bind_player(value: KingdomPlayer) -> void:
@@ -53,22 +59,50 @@ func refresh() -> void:
 	health_text.text = "VIDA  %d / %d" % [player.current_health, player.max_health]
 	xp_text.text = "XP  %d / %d" % [player.experience, player.xp_required()]
 	level_text.text = "NÍVEL %02d  ·  DANO %d" % [player.level, player.damage]
+	var shown: Dictionary = game_state.village_resources if in_village else player.resources
 	resource_text.text = "Madeira   %03d\nPedra       %03d\nOuro         %03d" % [
+		shown["wood"], shown["stone"], shown["gold"]]
+	%CarryingText.visible = in_village
+	%CarryingText.text = "Carregando: M %d · P %d · O %d" % [
 		player.resources["wood"], player.resources["stone"], player.resources["gold"]]
+	if in_village:
+		objective_text.text = "VILA · EXPEDIÇÕES CONCLUÍDAS: %d\nDeposite antes de partir novamente." % game_state.expeditions_completed
 
 
 func update_objective(remaining: int, total: int) -> void:
 	objective_text.text = "PROTEJA A CLAREIRA\nErrantes derrotados  %02d / %02d" % [total - remaining, total]
 
 
-func show_result(victory: bool) -> void:
-	result_title.text = "Clareira protegida!" if victory else "Seu reino precisa de você."
-	result_description.text = (
-		"Os errantes foram derrotados.\nA futura vila tem um novo começo."
-		if victory else "Você caiu em combate.\nMova-se para evitar cercos e tente novamente."
-	)
+func show_failure() -> void:
+	result_title.text = "Expedição falhou"
+	result_description.text = "Recursos não depositados foram perdidos.\nNível e XP foram mantidos.\nRetornando à vila…"
 	result_panel.show()
-	%RestartButton.grab_focus()
+
+
+func set_location(village: bool) -> void:
+	in_village = village
+	%SuppliesTitle.text = "ARMAZENADO · VILA" if village else "CARREGANDO · EXPEDIÇÃO"
+	refresh()
+
+
+func show_message(text: String, duration: float = 3.5) -> void:
+	toast.text = text
+	_toast_remaining = duration
+
+
+func set_interaction_prompt(text: String) -> void:
+	%InteractionPrompt.text = text
+
+
+func _on_save_status(text: String) -> void:
+	%SaveStatus.text = text
+	%SaveStatus.visible = not text.is_empty()
+
+
+func confirm_reset() -> void:
+	if OS.is_debug_build() and not %ResetConfirmation.visible:
+		get_tree().paused = true
+		%ResetConfirmation.popup_centered()
 
 
 func _on_level_gained(new_level: int) -> void:

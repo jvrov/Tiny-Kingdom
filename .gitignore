@@ -13,6 +13,10 @@ export_credentials.cfg
 *.keystore
 *.jks
 
+# Local gameplay saves, if manually copied into the checkout.
+save.json
+save.json.corrupt-*
+
 # OS/editor files.
 .DS_Store
 Thumbs.db

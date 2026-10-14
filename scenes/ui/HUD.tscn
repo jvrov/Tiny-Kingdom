@@ -69,7 +69,7 @@ unique_name_in_owner = true
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -302.0
+offset_left = -350.0
 offset_top = 24.0
 offset_right = -24.0
 offset_bottom = 250.0
@@ -80,11 +80,12 @@ mouse_filter = 2
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Root/SuppliesPanel/Supplies"]
+[node name="SuppliesTitle" type="Label" parent="Root/SuppliesPanel/Supplies"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.85, 0.62, 1)
 theme_override_font_sizes/font_size = 17
-text = "RESERVAS DO REINO"
+text = "ARMAZENADO · VILA"
 
 [node name="ResourceText" type="Label" parent="Root/SuppliesPanel/Supplies"]
 unique_name_in_owner = true
@@ -94,6 +95,12 @@ text = "Madeira   000\nPedra       000\nOuro         000"
 
 [node name="Separator" type="HSeparator" parent="Root/SuppliesPanel/Supplies"]
 layout_mode = 2
+
+[node name="CarryingText" type="Label" parent="Root/SuppliesPanel/Supplies"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.62, 1)
+theme_override_font_sizes/font_size = 14
 
 [node name="ObjectiveText" type="Label" parent="Root/SuppliesPanel/Supplies"]
 unique_name_in_owner = true
@@ -119,6 +126,7 @@ theme_override_font_sizes/font_size = 21
 horizontal_alignment = 1
 
 [node name="Hint" type="Label" parent="Root"]
+unique_name_in_owner = true
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -132,8 +140,42 @@ theme_override_colors/font_color = Color(0.88, 0.91, 0.82, 1)
 theme_override_colors/font_shadow_color = Color(0.05, 0.12, 0.1, 1)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 17
-text = "WASD / SETAS   mover     ·     ATAQUE AUTOMÁTICO   aproxime-se     ·     R   recomeçar"
+theme_override_font_sizes/font_size = 15
+text = "WASD / SETAS   mover     ·     E   interagir     ·     ATAQUE AUTOMÁTICO"
+horizontal_alignment = 1
+
+[node name="InteractionPrompt" type="Label" parent="Root"]
+unique_name_in_owner = true
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -104.0
+offset_bottom = -66.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_shadow_color = Color(0.05, 0.12, 0.1, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 23
+horizontal_alignment = 1
+
+[node name="SaveStatus" type="Label" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 380.0
+offset_top = 190.0
+offset_right = -370.0
+offset_bottom = 265.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.72, 0.5, 1)
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 2
 horizontal_alignment = 1
 
 [node name="ResultPanel" type="PanelContainer" parent="Root"]
@@ -168,8 +210,11 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="Root/ResultPanel/Result"]
+[node name="ResetConfirmation" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 52)
-layout_mode = 2
-text = "Recomeçar a expedição  [R]"
+process_mode = 3
+title = "Reset de desenvolvimento"
+size = Vector2i(520, 180)
+dialog_text = "Apagar todo o progresso salvo?\nRecursos, nível e expedições voltarão aos valores iniciais."
+ok_button_text = "Apagar progresso"
+cancel_button_text = "Cancelar"
