@@ -14,7 +14,10 @@ signal defeated
 @export_range(0.0, 1.0) var drop_chance: float = 0.65
 
 var current_health: int
-var target: KingdomPlayer
+var target: Node2D
+var invading := false
+var defended_hall: VillageBuilding
+var defending_player: KingdomPlayer
 var _dead := false
 var _attack_remaining: float = 0.0
 var _hurt_flash: float = 0.0
@@ -33,10 +36,12 @@ func _physics_process(delta: float) -> void:
 	_attack_remaining = maxf(0.0, _attack_remaining - delta)
 	_hurt_flash = maxf(0.0, _hurt_flash - delta)
 	velocity = Vector2.ZERO
+	if invading:
+		target = select_defense_target()
 	if is_alive() and is_instance_valid(target) and target.is_alive():
 		var offset := target.global_position - global_position
 		var distance := offset.length()
-		if distance <= detection_range:
+		if invading or distance <= detection_range:
 			if distance > stop_distance:
 				velocity = offset.normalized() * speed
 			if distance <= attack_range and _attack_remaining <= 0.0:
@@ -64,7 +69,7 @@ func take_damage(amount: int, source: KingdomPlayer = null) -> void:
 		# Guarded by _dead: multiple hits in one frame cannot duplicate rewards.
 		if is_instance_valid(source) and source.is_alive():
 			source.gain_experience(experience_reward)
-			if _rng.randf() < drop_chance:
+			if not invading and _rng.randf() < drop_chance:
 				var kinds := ["wood", "stone", "gold"]
 				source.add_resource(kinds[_rng.randi_range(0, kinds.size() - 1)],
 					_rng.randi_range(1, 3))
@@ -83,3 +88,19 @@ func _draw() -> void:
 	if current_health < max_health:
 		draw_rect(Rect2(-19, -29, 38, 5), Color("282f35"))
 		draw_rect(Rect2(-19, -29, 38.0 * current_health / max_health, 5), Color("ef9690"))
+
+
+func select_defense_target() -> Node2D:
+	if is_instance_valid(defending_player) and defending_player.is_alive() and global_position.distance_to(defending_player.global_position) <= 160:
+		return defending_player
+	var nearest: VillageBuilding
+	var distance := 180.0
+	for building in get_tree().get_nodes_in_group("buildings"):
+		if building.defending and building.is_alive():
+			var next: float = global_position.distance_to(building.global_position)
+			if next < distance:
+				distance = next
+				nearest = building
+	if nearest != null:
+		return nearest
+	return defended_hall if is_instance_valid(defended_hall) and defended_hall.is_alive() else null

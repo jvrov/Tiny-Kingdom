@@ -60,7 +60,7 @@ func _test_migration() -> void:
 	_write(path, legacy)
 	var store := SaveSystem.new(path)
 	var migrated := store.load_data()
-	_expect(migrated.version == 2 and store.needs_save, "v1 requests migration to v2")
+	_expect(migrated.version == SaveSystem.VERSION and store.needs_save, "v1 requests migration to current version")
 	_expect(migrated.resources == legacy.resources, "migration preserves all bank resources")
 	_expect(migrated.player == legacy.player, "migration preserves level, XP, health and total damage")
 	_expect(migrated.expeditions_completed == 7, "migration preserves completed expeditions")
@@ -76,12 +76,12 @@ func _test_migration() -> void:
 		"failed migration leaves the original v1 file intact")
 	DirAccess.remove_absolute(path + ".tmp")
 	_expect(store.save_data(migrated), "migration can be retried after a write failure")
-	_expect(store.load_data() == migrated and not store.needs_save, "v2 reload does not migrate or duplicate bonuses")
+	_expect(store.load_data() == migrated and not store.needs_save, "current save reload does not migrate or duplicate bonuses")
 	_write(directory + "/game.json", legacy)
 	state.initialize(directory + "/game.json")
 	_expect(state.progression == legacy.player and state.village_resources == legacy.resources,
 		"GameState loads all existing Phase 2 progress")
-	_expect(JSON.parse_string(FileAccess.get_file_as_string(state.storage.path)).version == 2,
+	_expect(JSON.parse_string(FileAccess.get_file_as_string(state.storage.path)).version == SaveSystem.VERSION,
 		"GameState automatically commits migration")
 
 
@@ -285,7 +285,7 @@ func _test_buildings() -> void:
 	await _frames()
 	_expect(state.weapon_level == 0 and player.damage == 18, "debug reset removes weapon bonuses")
 	_expect(get_nodes_in_group("buildings").all(func(building): return building.level == 0), "debug reset restores available plots")
-	_expect(state.snapshot() == SaveSystem.defaults(), "reset persists complete v2 defaults")
+	_expect(state.snapshot() == SaveSystem.defaults(), "reset persists complete current defaults")
 	current_scene = null
 	main.queue_free()
 	await _frames()

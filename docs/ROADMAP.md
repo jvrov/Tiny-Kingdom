@@ -41,7 +41,27 @@ O save v1 da Fase 2 é migrado automaticamente para v2 na Fase 3.
 - [x] Persistência v2 de construções/posições/arma e migração v1 preservando progresso.
 - [x] 134 verificações anteriores preservadas e 85 novas aprovadas.
 
-Escopo desta fase concluído. Posicionamento livre, casas, muralhas, vida das estruturas e ondas completas foram adiados; não fazem parte desta entrega.
+Escopo da Fase 3 concluído. Vida temporária das estruturas e ondas foram adicionadas na Fase 3.5. Posicionamento livre, casas e muralhas seguem fora do escopo.
+
+## Fase 3.5 — Defesa da vila
+
+- [x] Bandeira com interação E e confirmação manual; Prefeitura obrigatória, Torre opcional.
+- [x] WaveManager com estados IDLE, PREPARING, ACTIVE, BETWEEN_WAVES, VICTORY e DEFEAT.
+- [x] Cinco ondas de 5/7/9/12/15 invasores, spawns nas quatro bordas e intervalo de cinco segundos.
+- [x] IA com prioridade para jogador próximo, prédios próximos e Prefeitura.
+- [x] Prefeitura com 300 HP; Ferreiro/Torre com 150 HP e desativação temporária.
+- [x] Torre existente integrada à defesa, sem duplicar combate.
+- [x] Respawn do jogador após cinco segundos, sem encerrar a batalha.
+- [x] Vitória com recompensa de 20 madeira/15 pedra/10 ouro e contador persistente.
+- [x] Derrota sem perda de construções, recursos armazenados ou melhorias.
+- [x] Dificuldade por defesas concluídas, limitada a +50% vida/+30% dano.
+- [x] Bloqueios de expedição, depósito, construção, melhorias e defesas simultâneas.
+- [x] XP por abate do jogador, sem drops individuais de recursos.
+- [x] HUD de ondas/HP/contagem regressiva, alerta visual e marcadores de entrada.
+- [x] Save v3 com migrações v1/v2, backup e recompensa transacional com nova tentativa.
+- [x] 219 verificações anteriores preservadas e 111 novas aprovadas; revisão visual.
+
+Limitações: um tipo de invasor, sem dano estrutural persistente ou retomada da batalha após fechar. Indicadores fora da tela foram adiados. Balanceamento inicial requer mais sessões de jogo.
 
 ## Fase 4 — Inventário e equipamentos
 

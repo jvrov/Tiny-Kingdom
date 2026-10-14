@@ -2,6 +2,10 @@ class_name VillageBuilding
 extends KingdomInteractable
 
 @export_enum("town_hall", "blacksmith", "archer_tower") var building_id := "town_hall"
+signal health_changed
+@export var max_health := 150
+var current_health := 150
+var defending := false
 var level := 0
 @onready var game_state: Node = get_node("/root/GameState")
 
@@ -11,6 +15,9 @@ func _ready() -> void:
 	action = "building"
 	add_to_group("buildings")
 	game_state.changed.connect(refresh)
+	if building_id == "town_hall":
+		max_health = 300
+	current_health = max_health
 	refresh()
 
 
@@ -36,6 +43,9 @@ func _draw() -> void:
 		draw_string(font, Vector2(-115, 56), "Terreno disponível", HORIZONTAL_ALIGNMENT_CENTER, 230, 16, Color("d6d8aa"))
 		draw_string(font, Vector2(-115, 78), data.name, HORIZONTAL_ALIGNMENT_CENTER, 230, 17, Color("d6d8aa"))
 		return
+	if defending:
+		draw_rect(Rect2(-45, 70, 90, 6), Color("312329"))
+		draw_rect(Rect2(-45, 70, 90.0 * current_health / max_health, 6), Color("e8a57b"))
 	draw_circle(Vector2(0, 14), 46, Color(0.05, 0.1, 0.1, 0.3))
 	match building_id:
 		"town_hall":
@@ -58,3 +68,24 @@ func _draw() -> void:
 			draw_line(Vector2(-12, -31), Vector2(12, -31), Color("283f3c"), 5)
 			draw_line(Vector2(-12, -7), Vector2(12, -7), Color("283f3c"), 5)
 	draw_string(font, Vector2(-125, 58), "%s · Nv. %d" % [data.name, level], HORIZONTAL_ALIGNMENT_CENTER, 250, 17, Color("e7d3a0"))
+
+
+func set_defending(value: bool) -> void:
+	defending = value
+	current_health = max_health
+	modulate = Color.WHITE
+	health_changed.emit()
+	queue_redraw()
+
+
+func is_alive() -> bool:
+	return level > 0 and current_health > 0
+
+
+func take_damage(amount: int) -> void:
+	if not defending or not is_alive() or amount <= 0:
+		return
+	current_health = maxi(0, current_health - amount)
+	modulate = Color("676767") if current_health == 0 else Color.WHITE
+	health_changed.emit()
+	queue_redraw()

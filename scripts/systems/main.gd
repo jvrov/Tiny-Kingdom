@@ -21,6 +21,7 @@ var _generation := 0
 @onready var game_state: Node = get_node("/root/GameState")
 @onready var player: KingdomPlayer = $Actors/Player
 @onready var hud: KingdomHUD = $HUD
+@onready var waves: WaveManager = $WaveManager
 
 
 func _ready() -> void:
@@ -31,6 +32,10 @@ func _ready() -> void:
 	hud.reset_requested.connect(reset_progress)
 	hud.building_panel.purchase_requested.connect(_on_purchase_requested)
 	game_state.weapon_upgraded.connect(_on_weapon_upgraded)
+	hud.defense_confirmed.connect(_confirm_defense)
+	hud.defense_canceled.connect(waves.cancel_preparation)
+	waves.message.connect(func(text): hud.show_message(text, 7.0))
+	waves.changed.connect(_refresh_defense)
 	hud.bind_player(player)
 	_load_map(true)
 
@@ -83,11 +88,15 @@ func _load_map(village: bool) -> void:
 
 
 func _on_building_interacted(_actor: KingdomPlayer, building: VillageBuilding) -> void:
+	if _block_defense():
+		return
 	if in_village and not transitioning and not dying and player.is_alive():
 		hud.building_panel.open(building.building_id)
 
 
 func _on_purchase_requested(id: String, action: String, expected_level: int) -> void:
+	if _block_defense():
+		return
 	if not in_village or transitioning or dying or not player.is_alive():
 		return
 	var nearby := false
@@ -117,9 +126,15 @@ func _on_interacted(_actor: KingdomPlayer, action: String) -> void:
 		"depart": start_expedition()
 		"return": return_to_village()
 		"deposit": deposit_resources()
+		"defend": request_defense()
 
 
 func start_expedition() -> bool:
+	if _block_defense():
+		return false
+	if waves.reward_pending:
+		hud.show_message("Receba a recompensa pendente na bandeira antes de partir.")
+		return false
 	if not in_village or transitioning or dying:
 		return false
 	if not game_state.begin_expedition():
@@ -145,6 +160,8 @@ func return_to_village() -> bool:
 
 
 func deposit_resources() -> bool:
+	if _block_defense():
+		return false
 	if not in_village or transitioning or dying:
 		return false
 	if not game_state.has_cargo():
@@ -168,6 +185,9 @@ func _on_enemy_defeated() -> void:
 
 
 func _on_player_died() -> void:
+	if in_village and waves.is_battle():
+		waves.incapacitate_player()
+		return
 	if dying or in_village:
 		return
 	dying = true
@@ -188,8 +208,42 @@ func reset_progress() -> void:
 	if not OS.is_debug_build():
 		return
 	if game_state.reset_progress():
+		waves.cancel()
 		# Invalidate a pending death timer before scheduling the new map.
 		_generation += 1
 		transitioning = true
 		_load_map.call_deferred(true)
 		hud.show_message("Progresso reiniciado.")
+
+
+func _block_defense() -> bool:
+	if game_state.defense_busy():
+		hud.show_message("A vila está sob ataque!")
+		return true
+	return false
+
+
+func request_defense() -> bool:
+	if not in_village or transitioning or dying or not player.is_alive():
+		return false
+	if _block_defense():
+		return false
+	if waves.reward_pending:
+		return waves.claim_reward()
+	if not waves.prepare(player, $Actors, $Map/Village/TownHall):
+		return false
+	hud.confirm_defense()
+	return true
+
+
+func _confirm_defense() -> void:
+	if in_village and not transitioning and player.is_alive():
+		if waves.start():
+			return
+	waves.cancel_preparation()
+
+
+func _refresh_defense() -> void:
+	hud.update_defense(waves)
+	if in_village and $Map.get_child_count() > 0:
+		$Map.get_child(0).set_under_attack(waves.is_battle())

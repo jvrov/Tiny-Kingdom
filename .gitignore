@@ -17,6 +17,7 @@ export_credentials.cfg
 save.json
 save.json.corrupt-*
 save.json.v1-*.bak
+save.json.v2-*.bak
 
 # OS/editor files.
 .DS_Store

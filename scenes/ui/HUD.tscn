@@ -216,8 +216,46 @@ unique_name_in_owner = true
 process_mode = 3
 title = "Reset de desenvolvimento"
 size = Vector2i(520, 180)
-dialog_text = "Apagar todo o progresso salvo?\nRecursos, nível e expedições voltarão aos valores iniciais."
+dialog_text = "Apagar todo o progresso salvo?\nRecursos, atributos, construções e contadores serão resetados."
 ok_button_text = "Apagar progresso"
+cancel_button_text = "Cancelar"
+
+[node name="DefensePanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -270.0
+offset_right = 270.0
+offset_top = 24.0
+offset_bottom = 177.0
+mouse_filter = 2
+
+[node name="Content" type="VBoxContainer" parent="Root/DefensePanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Root/DefensePanel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.65, 0.5, 1)
+theme_override_font_sizes/font_size = 22
+text = "VILA SOB ATAQUE"
+horizontal_alignment = 1
+
+[node name="DefenseText" type="Label" parent="Root/DefensePanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="DefenseConfirmation" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+process_mode = 3
+title = "Defesa da vila"
+size = Vector2i(540, 200)
+dialog_text = "Iniciar defesa da vila?\nProteja a Prefeitura durante 5 ondas.\nRecompensa: 20 madeira, 15 pedra e 10 ouro."
+ok_button_text = "Iniciar defesa"
 cancel_button_text = "Cancelar"
 
 [node name="BuildingPanel" parent="Root" instance=ExtResource("2_building")]

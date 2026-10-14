@@ -4,7 +4,7 @@ extends Node2D
 
 signal interacted(actor: KingdomPlayer)
 
-@export_enum("deposit", "depart", "return", "building") var action: String = "deposit"
+@export_enum("deposit", "depart", "return", "building", "defend") var action: String = "deposit"
 @export var prompt := "Depositar recursos"
 @export var interaction_range: float = 90.0
 
@@ -27,7 +27,10 @@ func interact(actor: KingdomPlayer) -> bool:
 func _draw() -> void:
 	var color := Color("d9bd79") if action == "deposit" else Color("76c6cf")
 	draw_circle(Vector2(0, 10), 38, Color(0.05, 0.1, 0.1, 0.3))
-	if action == "deposit":
+	if action == "defend":
+		draw_line(Vector2(0, -38), Vector2(0, 28), color, 5)
+		draw_colored_polygon(PackedVector2Array([Vector2(2, -38), Vector2(34, -24), Vector2(2, -12)]), Color("db8068"))
+	elif action == "deposit":
 		draw_rect(Rect2(-30, -25, 60, 50), Color("826441"))
 		draw_rect(Rect2(-30, -25, 60, 50), color, false, 3)
 		draw_line(Vector2(-30, -6), Vector2(30, -6), color, 3)
@@ -39,5 +42,7 @@ func _draw() -> void:
 		draw_line(Vector2(15, 0), Vector2(5, -10), color, 4)
 		draw_line(Vector2(15, 0), Vector2(5, 10), color, 4)
 	var label := "DEPÓSITO" if action == "deposit" else ("EXPEDIÇÃO" if action == "depart" else "VOLTAR À VILA")
+	if action == "defend":
+		label = "DEFESA DA VILA"
 	draw_string(ThemeDB.fallback_font, Vector2(-105, 62), label,
 		HORIZONTAL_ALIGNMENT_CENTER, 210, 18, color)

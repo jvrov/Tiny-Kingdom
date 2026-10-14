@@ -2,7 +2,7 @@ class_name SaveSystem
 extends RefCounted
 ## Versioned, validated JSON. A failed write never replaces the last good file.
 
-const VERSION := 2
+const VERSION := 3
 const DEFAULT_PATH := "user://save.json"
 const MAX_VALUE := 1000000000
 var path: String
@@ -21,6 +21,7 @@ static func defaults() -> Dictionary:
 		"resources": {"wood": 0, "stone": 0, "gold": 0},
 		"player": {"level": 1, "xp": 0, "max_health": 100, "damage": 18},
 		"expeditions_completed": 0,
+		"defenses_completed": 0,
 		"buildings": BuildingData.default_state(),
 		"weapon_level": 0
 	}
@@ -48,12 +49,17 @@ func load_data() -> Dictionary:
 	if error != OK or not json.data is Dictionary:
 		return _recover_corrupt()
 	var data: Dictionary = json.data
-	var legacy := _integer(data.get("version"), 1, 1)
-	if _integer(data.get("version"), 1, MAX_VALUE) and int(data.version) not in [1, VERSION]:
+	var legacy := _integer(data.get("version"), 1, 2)
+	if _integer(data.get("version"), 1, MAX_VALUE) and int(data.version) not in [1, 2, VERSION]:
 		write_blocked = true
 		message = "Versão de save incompatível. Arquivo preservado; gravação bloqueada."
 		return defaults()
-	if not (_valid_common(data, 1) if legacy else valid_data(data)):
+	var valid := valid_data(data)
+	if legacy:
+		valid = _valid_common(data, int(data.version))
+		if valid and int(data.version) == 2:
+			valid = _valid_buildings(data)
+	if not valid:
 		return _recover_corrupt()
 	# JSON numbers arrive as floats; normalize before using them in gameplay.
 	var normalized := defaults()
@@ -62,20 +68,22 @@ func load_data() -> Dictionary:
 	for key in normalized.player:
 		normalized.player[key] = int(data.player[key])
 	normalized.expeditions_completed = int(data.expeditions_completed)
-	if legacy:
-		# Load all v1 values unchanged. New fields start empty; damage is already total.
-		var backup := path + ".v1-" + str(Time.get_unix_time_from_system()).replace(".", "-") + ".bak"
-		if DirAccess.copy_absolute(path, backup) != OK:
-			write_blocked = true
-			message = "Save v1 carregado, mas o backup falhou. Migração e gravação bloqueadas."
-		else:
-			needs_save = true
-	else:
+	# Sequential schema migration: v1 defaults buildings/weapon; v2 defaults defenses.
+	if int(data.version) >= 2:
 		normalized.weapon_level = int(data.weapon_level)
 		for id in BuildingData.IDS:
 			normalized.buildings[id].level = int(data.buildings[id].level)
 			for axis in ["x", "y"]:
 				normalized.buildings[id].position[axis] = int(data.buildings[id].position[axis])
+	if not legacy:
+		normalized.defenses_completed = int(data.defenses_completed)
+	else:
+		var backup := path + ".v%d-" % int(data.version) + str(Time.get_unix_time_from_system()).replace(".", "-") + ".bak"
+		if DirAccess.copy_absolute(path, backup) != OK:
+			write_blocked = true
+			message = "Save antigo carregado, mas o backup falhou. Migração e gravação bloqueadas."
+		else:
+			needs_save = true
 	return normalized
 
 
@@ -98,8 +106,10 @@ static func _integer(value: Variant, minimum: int, maximum: int) -> bool:
 
 
 static func valid_data(data: Dictionary) -> bool:
-	if not _valid_common(data, VERSION):
-		return false
+	return _valid_common(data, VERSION) and _integer(data.get("defenses_completed"), 0, MAX_VALUE) and _valid_buildings(data)
+
+
+static func _valid_buildings(data: Dictionary) -> bool:
 	if not data.get("buildings") is Dictionary or data.buildings.size() != BuildingData.IDS.size():
 		return false
 	for id in BuildingData.IDS:

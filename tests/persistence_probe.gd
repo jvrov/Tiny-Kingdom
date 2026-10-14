@@ -23,6 +23,8 @@ func _run() -> void:
 	root.add_child(main)
 	var actual: Dictionary = state.snapshot()
 	var matches: bool = actual.version == expected.version and not state.has_cargo()
+	matches = matches and actual.defenses_completed == expected.defenses_completed
+	matches = matches and not state.defense_busy() and get_nodes_in_group("enemies").is_empty()
 	matches = matches and actual.expeditions_completed == expected.expeditions_completed
 	for key in ["wood", "stone", "gold"]:
 		matches = matches and actual.resources[key] == expected.resources[key]

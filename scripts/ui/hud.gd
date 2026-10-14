@@ -2,6 +2,8 @@ class_name KingdomHUD
 extends CanvasLayer
 
 signal reset_requested
+signal defense_confirmed
+signal defense_canceled
 
 const RESOURCE_NAMES := {"wood": "Madeira", "stone": "Pedra", "gold": "Ouro"}
 var player: KingdomPlayer
@@ -34,6 +36,13 @@ func _ready() -> void:
 	%ResetConfirmation.confirmed.connect(func():
 		get_tree().paused = false
 		reset_requested.emit())
+	%DefenseConfirmation.canceled.connect(func():
+		get_tree().paused = false
+		defense_canceled.emit())
+	%DefenseConfirmation.confirmed.connect(func():
+		get_tree().paused = false
+		defense_confirmed.emit())
+	%DefensePanel.add_theme_stylebox_override("panel", _panel_style(Color("38272b"), Color("bf7665")))
 	game_state.changed.connect(refresh)
 	game_state.save_status_changed.connect(_on_save_status)
 	_on_save_status(game_state.save_status)
@@ -68,7 +77,7 @@ func refresh() -> void:
 		player.resources["wood"], player.resources["stone"], player.resources["gold"]]
 	if in_village:
 		%SuppliesTitle.text = "ARMAZENADO · Vila Nv. %d" % game_state.building_level("town_hall")
-		objective_text.text = "VILA · EXPEDIÇÕES CONCLUÍDAS: %d\nDeposite antes de partir novamente." % game_state.expeditions_completed
+		objective_text.text = "VILA · EXPEDIÇÕES CONCLUÍDAS: %d\nDefesas concluídas: %d" % [game_state.expeditions_completed, game_state.defenses_completed]
 
 
 func update_objective(remaining: int, total: int) -> void:
@@ -102,7 +111,7 @@ func _on_save_status(text: String) -> void:
 
 
 func confirm_reset() -> void:
-	if OS.is_debug_build() and not %ResetConfirmation.visible and not building_panel.visible:
+	if OS.is_debug_build() and not %ResetConfirmation.visible and not building_panel.visible and not %DefenseConfirmation.visible:
 		get_tree().paused = true
 		%ResetConfirmation.popup_centered()
 
@@ -147,3 +156,24 @@ func _style_bar(bar: ProgressBar, color: Color) -> void:
 	fill.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("background", background)
 	bar.add_theme_stylebox_override("fill", fill)
+
+
+func confirm_defense() -> void:
+	get_tree().paused = true
+	%DefenseConfirmation.popup_centered()
+
+
+func update_defense(waves: WaveManager) -> void:
+	%DefensePanel.visible = waves.is_battle()
+	if not waves.is_battle():
+		return
+	var status := "Onda %d / %d · Inimigos: %d\nPrefeitura: %d / %d" % [
+		waves.wave, waves.COUNTS.size(), waves.enemies.size(),
+		waves.hall.current_health, waves.hall.max_health]
+	if waves.state == WaveManager.State.BETWEEN_WAVES:
+		status += "\nPróxima onda em: %d" % ceili(waves.countdown)
+	else:
+		status += "\nChegando: %d" % (waves.COUNTS[waves.wave - 1] - waves.spawned)
+	if waves.respawn_remaining > 0:
+		status += " · Retorno: %d s" % ceili(waves.respawn_remaining)
+	%DefenseText.text = status

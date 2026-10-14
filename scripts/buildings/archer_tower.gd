@@ -11,7 +11,7 @@ var _hit_point := Vector2.ZERO
 func _physics_process(delta: float) -> void:
 	_remaining = maxf(0, _remaining - delta)
 	_flash = maxf(0, _flash - delta)
-	if level > 0 and _remaining <= 0:
+	if is_alive() and _remaining <= 0:
 		var enemy := nearest_enemy()
 		if enemy != null:
 			_remaining = attack_cooldown
@@ -36,6 +36,6 @@ func nearest_enemy() -> KingdomEnemy:
 
 func _draw() -> void:
 	super._draw()
-	if level > 0 and _flash > 0:
+	if is_alive() and _flash > 0:
 		draw_line(Vector2(0, -53), _hit_point, Color(1, 0.87, 0.5, _flash / 0.18), 3, true)
 		draw_circle(_hit_point, 8, Color(1, 0.87, 0.5, _flash / 0.18))

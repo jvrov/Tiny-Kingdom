@@ -27,3 +27,9 @@ building_id = "town_hall"
 building_id = "blacksmith"
 
 [node name="ArcherTower" parent="." instance=ExtResource("4_tower")]
+
+[node name="DefenseFlag" type="Node2D" parent="."]
+position = Vector2(420, 555)
+script = ExtResource("2_interactable")
+action = "defend"
+prompt = "Iniciar defesa"

@@ -9,6 +9,9 @@ signal weapon_upgraded
 var village_resources: Dictionary = {"wood": 0, "stone": 0, "gold": 0}
 var expedition_resources: Dictionary = {"wood": 0, "stone": 0, "gold": 0}
 var progression: Dictionary = {"level": 1, "xp": 0, "max_health": 100, "damage": 18}
+var defenses_completed := 0
+# Runtime coordinator only; battle state is never serialized.
+var defense: Node
 var expeditions_completed := 0
 var expedition_active := false
 var initialized := false
@@ -40,6 +43,7 @@ func snapshot() -> Dictionary:
 		"resources": village_resources.duplicate(),
 		"player": progression.duplicate(),
 		"expeditions_completed": expeditions_completed,
+		"defenses_completed": defenses_completed,
 		"buildings": buildings.duplicate(true),
 		"weapon_level": weapon_level
 	}
@@ -49,6 +53,7 @@ func _apply_permanent(data: Dictionary) -> void:
 	village_resources = data.resources.duplicate()
 	progression = data.player.duplicate()
 	expeditions_completed = data.expeditions_completed
+	defenses_completed = data.defenses_completed
 	buildings = data.buildings.duplicate(true)
 	weapon_level = data.weapon_level
 
@@ -73,6 +78,9 @@ func spend_resources(cost: Dictionary) -> bool:
 
 
 func _commit_economy(cost: Dictionary, next: Dictionary) -> bool:
+	if defense_busy():
+		action_message = "A vila está sob ataque!"
+		return false
 	if expedition_active:
 		action_message = "Retorne à vila para construir."
 		return false
@@ -127,6 +135,9 @@ func building_offer(id: String) -> Dictionary:
 		elif storage != null and storage.write_blocked:
 			offer.reason = save_status
 		offer.enabled = offer.reason.is_empty()
+	if defense_busy():
+		offer.enabled = false
+		offer.reason = "A vila está sob ataque!"
 	return offer
 
 
@@ -183,7 +194,7 @@ func has_cargo() -> bool:
 
 
 func begin_expedition() -> bool:
-	if expedition_active or has_cargo():
+	if defense_busy() or expedition_active or has_cargo():
 		return false
 	expedition_resources = {"wood": 0, "stone": 0, "gold": 0}
 	expedition_active = true
@@ -205,7 +216,7 @@ func finish_expedition(survived: bool) -> bool:
 
 
 func deposit() -> bool:
-	if expedition_active or not has_cargo():
+	if defense_busy() or expedition_active or not has_cargo():
 		return false
 	var previous := village_resources.duplicate()
 	for key in village_resources:
@@ -230,5 +241,27 @@ func reset_progress() -> bool:
 	expeditions_completed = 0
 	expedition_active = false
 	persist()
+	changed.emit()
+	return true
+
+
+func defense_busy() -> bool:
+	return is_instance_valid(defense) and defense.is_running()
+
+
+func commit_defense_reward() -> bool:
+	if not is_instance_valid(defense) or not defense.can_claim_reward():
+		return false
+	var next := snapshot()
+	for key in defense.REWARD:
+		next.resources[key] += defense.REWARD[key]
+	next.defenses_completed += 1
+	if not storage.save_data(next):
+		_set_status(storage.message)
+		return false
+	_apply_permanent(next)
+	# Consume eligibility before emitting signals, including reentrant listeners.
+	defense.reward_pending = false
+	_set_status("")
 	changed.emit()
 	return true
