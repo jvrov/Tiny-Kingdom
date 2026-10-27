@@ -11,6 +11,8 @@ script = ExtResource("1_main")
 
 [node name="Map" type="Node2D" parent="."]
 
+[node name="Drops" type="Node2D" parent="."]
+
 [node name="Actors" type="Node2D" parent="."]
 y_sort_enabled = true
 

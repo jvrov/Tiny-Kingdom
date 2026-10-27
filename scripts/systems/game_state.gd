@@ -5,6 +5,7 @@ extends Node
 signal changed
 signal save_status_changed(message: String)
 signal weapon_upgraded
+signal inventory_changed
 
 var village_resources: Dictionary = {"wood": 0, "stone": 0, "gold": 0}
 var expedition_resources: Dictionary = {"wood": 0, "stone": 0, "gold": 0}
@@ -19,6 +20,9 @@ var save_status := ""
 var storage: SaveSystem
 var buildings: Dictionary = BuildingData.default_state()
 var weapon_level := 0
+var attribute_base := {"damage": 18, "max_health": 100, "speed": 230}
+var inventory: Array = InventoryData.empty_slots()
+var equipment: Dictionary = InventoryData.empty_equipment()
 var action_message := ""
 
 
@@ -45,7 +49,10 @@ func snapshot() -> Dictionary:
 		"expeditions_completed": expeditions_completed,
 		"defenses_completed": defenses_completed,
 		"buildings": buildings.duplicate(true),
-		"weapon_level": weapon_level
+		"weapon_level": weapon_level,
+		"attribute_base": attribute_base.duplicate(),
+		"inventory": inventory.duplicate(true),
+		"equipment": equipment.duplicate()
 	}
 
 
@@ -56,6 +63,9 @@ func _apply_permanent(data: Dictionary) -> void:
 	defenses_completed = data.defenses_completed
 	buildings = data.buildings.duplicate(true)
 	weapon_level = data.weapon_level
+	attribute_base = data.attribute_base.duplicate()
+	inventory = data.inventory.duplicate(true)
+	equipment = data.equipment.duplicate()
 
 
 func building_level(id: String) -> int:
@@ -154,7 +164,7 @@ func purchase_building(id: String, action: String, expected_level: int) -> bool:
 		next.buildings[id].level = 1
 	else:
 		next.weapon_level = weapon_level + 1
-		next.player.damage += BuildingData.weapon_bonus(weapon_level + 1) - BuildingData.weapon_bonus(weapon_level)
+		next.player.damage = AttributeStats.permanent(attribute_base, progression.level, next.weapon_level).damage
 	if not _commit_economy(offer.cost, next):
 		return false
 	if action == "upgrade":
@@ -180,7 +190,7 @@ func sync_player(player: KingdomPlayer) -> void:
 	expedition_resources = player.resources.duplicate()
 	var progress := {
 		"level": player.level, "xp": player.experience,
-		"max_health": player.max_health, "damage": player.damage
+		"max_health": player.max_health - player.equipment_bonuses.max_health, "damage": player.damage - player.equipment_bonuses.damage
 	}
 	if progression != progress:
 		progression = progress
@@ -264,4 +274,81 @@ func commit_defense_reward() -> bool:
 	defense.reward_pending = false
 	_set_status("")
 	changed.emit()
+	return true
+
+
+func attribute_breakdown() -> Dictionary:
+	return AttributeStats.breakdown(attribute_base, progression.level, weapon_level, equipment)
+
+
+func collect_item(id: String, quantity: int = 1) -> bool:
+	if ItemData.definition(id).is_empty() or quantity < 1:
+		action_message = "Item inválido."
+		return false
+	var slots := InventoryData.add(inventory, id, quantity)
+	if slots.is_empty():
+		action_message = "Inventário cheio. O item continua no chão."
+		return false
+	var next := snapshot()
+	next.inventory = slots
+	return _commit_inventory(next)
+
+
+func _commit_inventory(next: Dictionary) -> bool:
+	if not storage.save_data(next):
+		_set_status(storage.message)
+		action_message = "Não foi possível salvar. Nenhum item foi alterado."
+		return false
+	_apply_permanent(next)
+	_set_status("")
+	action_message = ""
+	inventory_changed.emit()
+	changed.emit()
+	return true
+
+
+func inventory_action(actor: KingdomPlayer, action: String, index: int = -1, slot: String = "") -> bool:
+	action_message = "Ação inválida."
+	if not is_instance_valid(actor) or not actor.is_alive():
+		action_message = "Você precisa estar vivo para usar o inventário."
+		return false
+	var next := snapshot()
+	var heal := 0
+	if action == "unequip":
+		if not ItemData.SLOTS.has(slot) or equipment[slot] == "":
+			return false
+		var slots := InventoryData.add(inventory, equipment[slot])
+		if slots.is_empty():
+			action_message = "Inventário cheio. Libere um espaço para desequipar."
+			return false
+		next.inventory = slots
+		next.equipment[slot] = ""
+	else:
+		if index < 0 or index >= inventory.size() or inventory[index].is_empty():
+			return false
+		var item := ItemData.definition(inventory[index].id)
+		match action:
+			"equip":
+				if not ItemData.SLOTS.has(item.type):
+					return false
+				var previous: String = equipment[item.type]
+				next.equipment[item.type] = item.id
+				next.inventory[index] = {} if previous == "" else {"id": previous, "quantity": 1}
+			"use":
+				if item.type != "consumable" or actor.current_health >= actor.max_health:
+					action_message = "Vida já está cheia."
+					return false
+				heal = item.value
+				next.inventory[index].quantity -= 1
+				if next.inventory[index].quantity == 0:
+					next.inventory[index] = {}
+			"discard":
+				next.inventory[index] = {}
+			_:
+				return false
+	if not _commit_inventory(next):
+		return false
+	if heal > 0:
+		actor.current_health = mini(actor.max_health, actor.current_health + heal)
+		actor.stats_changed.emit()
 	return true

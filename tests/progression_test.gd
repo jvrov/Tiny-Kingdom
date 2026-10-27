@@ -55,6 +55,7 @@ func _test_save_validation() -> void:
 	var data := SaveSystem.defaults()
 	data.resources = {"wood": 14, "stone": 7, "gold": 3}
 	data.player = {"level": 3, "xp": 15, "max_health": 130, "damage": 26}
+	data.attribute_base = AttributeStats.legacy_base(data.player, data.weapon_level)
 	data.expeditions_completed = 4
 	_expect(storage.save_data(data), "native JSON save writes successfully")
 	_expect(FileAccess.file_exists(storage.path), "save file exists")

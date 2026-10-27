@@ -2,7 +2,7 @@ class_name SaveSystem
 extends RefCounted
 ## Versioned, validated JSON. A failed write never replaces the last good file.
 
-const VERSION := 3
+const VERSION := 4
 const DEFAULT_PATH := "user://save.json"
 const MAX_VALUE := 1000000000
 var path: String
@@ -23,7 +23,10 @@ static func defaults() -> Dictionary:
 		"expeditions_completed": 0,
 		"defenses_completed": 0,
 		"buildings": BuildingData.default_state(),
-		"weapon_level": 0
+		"weapon_level": 0,
+		"attribute_base": {"damage": 18, "max_health": 100, "speed": 230},
+		"inventory": InventoryData.empty_slots(),
+		"equipment": InventoryData.empty_equipment()
 	}
 
 
@@ -39,7 +42,7 @@ func load_data() -> Dictionary:
 		write_blocked = true
 		message = "Não foi possível ler o save. O arquivo foi preservado."
 		return defaults()
-	# Refuse oversized input before parsing it; normal saves are under 1 KiB.
+	# Refuse oversized input before parsing it; normal saves use only a few KiB.
 	if file.get_length() > 1048576:
 		file.close()
 		return _recover_corrupt()
@@ -49,16 +52,18 @@ func load_data() -> Dictionary:
 	if error != OK or not json.data is Dictionary:
 		return _recover_corrupt()
 	var data: Dictionary = json.data
-	var legacy := _integer(data.get("version"), 1, 2)
-	if _integer(data.get("version"), 1, MAX_VALUE) and int(data.version) not in [1, 2, VERSION]:
+	var legacy := _integer(data.get("version"), 1, 3)
+	if _integer(data.get("version"), 1, MAX_VALUE) and int(data.version) not in [1, 2, 3, VERSION]:
 		write_blocked = true
 		message = "Versão de save incompatível. Arquivo preservado; gravação bloqueada."
 		return defaults()
 	var valid := valid_data(data)
 	if legacy:
 		valid = _valid_common(data, int(data.version))
-		if valid and int(data.version) == 2:
+		if valid and int(data.version) >= 2:
 			valid = _valid_buildings(data)
+		if valid and int(data.version) >= 3:
+			valid = _integer(data.get("defenses_completed"), 0, MAX_VALUE)
 	if not valid:
 		return _recover_corrupt()
 	# JSON numbers arrive as floats; normalize before using them in gameplay.
@@ -75,9 +80,17 @@ func load_data() -> Dictionary:
 			normalized.buildings[id].level = int(data.buildings[id].level)
 			for axis in ["x", "y"]:
 				normalized.buildings[id].position[axis] = int(data.buildings[id].position[axis])
-	if not legacy:
+	if int(data.version) >= 3:
 		normalized.defenses_completed = int(data.defenses_completed)
+	if not legacy:
+		for key in normalized.attribute_base:
+			normalized.attribute_base[key] = int(data.attribute_base[key])
+		normalized.equipment = data.equipment.duplicate()
+		for index in range(InventoryData.CAPACITY):
+			if not data.inventory[index].is_empty():
+				normalized.inventory[index] = {"id": data.inventory[index].id, "quantity": int(data.inventory[index].quantity)}
 	else:
+		normalized.attribute_base = AttributeStats.legacy_base(normalized.player, normalized.weapon_level)
 		var backup := path + ".v%d-" % int(data.version) + str(Time.get_unix_time_from_system()).replace(".", "-") + ".bak"
 		if DirAccess.copy_absolute(path, backup) != OK:
 			write_blocked = true
@@ -106,7 +119,7 @@ static func _integer(value: Variant, minimum: int, maximum: int) -> bool:
 
 
 static func valid_data(data: Dictionary) -> bool:
-	return _valid_common(data, VERSION) and _integer(data.get("defenses_completed"), 0, MAX_VALUE) and _valid_buildings(data)
+	return _valid_common(data, VERSION) and _integer(data.get("defenses_completed"), 0, MAX_VALUE) and _valid_buildings(data) and _valid_items(data)
 
 
 static func _valid_buildings(data: Dictionary) -> bool:
@@ -187,4 +200,36 @@ func erase() -> bool:
 		DirAccess.remove_absolute(path + ".tmp")
 	write_blocked = false
 	message = ""
+	return true
+
+
+static func _valid_items(data: Dictionary) -> bool:
+	if not data.get("attribute_base") is Dictionary:
+		return false
+	for key in ["damage", "max_health", "speed"]:
+		if not _integer(data.attribute_base.get(key), 1 if key == "speed" else -MAX_VALUE, MAX_VALUE):
+			return false
+	var expected := AttributeStats.permanent(data.attribute_base, int(data.player.level), int(data.weapon_level))
+	if expected.damage != data.player.damage or expected.max_health != data.player.max_health:
+		return false
+	if not data.get("inventory") is Array or data.inventory.size() != InventoryData.CAPACITY:
+		return false
+	for entry in data.inventory:
+		if not entry is Dictionary:
+			return false
+		if entry.is_empty():
+			continue
+		if not entry.get("id") is String or entry.size() != 2:
+			return false
+		var item := ItemData.definition(entry.id)
+		if item.is_empty() or not _integer(entry.get("quantity"), 1, item.max_stack):
+			return false
+	if not data.get("equipment") is Dictionary or data.equipment.size() != ItemData.SLOTS.size():
+		return false
+	for slot in ItemData.SLOTS:
+		var id: Variant = data.equipment.get(slot)
+		if not id is String:
+			return false
+		if id != "" and ItemData.definition(id).get("type") != slot:
+			return false
 	return true

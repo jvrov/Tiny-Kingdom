@@ -61,7 +61,7 @@ func _test_migrations() -> void:
 	_write(path, v2)
 	var storage := SaveSystem.new(path)
 	var migrated := storage.load_data()
-	_expect(migrated.version == 3 and migrated.defenses_completed == 0, "v2 migrates to v3 with zero defenses")
+	_expect(migrated.version == SaveSystem.VERSION and migrated.defenses_completed == 0, "v2 migrates to v3 with zero defenses")
 	_expect(migrated.resources == v2.resources and migrated.player == v2.player, "v2 resources and all player attributes survive")
 	_expect(migrated.buildings == v2.buildings and migrated.weapon_level == 3 and migrated.expeditions_completed == 9,
 		"v2 buildings, positions, weapon and expeditions survive")
@@ -83,7 +83,7 @@ func _test_migrations() -> void:
 	_write(path, v1)
 	storage = SaveSystem.new(path)
 	migrated = storage.load_data()
-	_expect(migrated.version == 3 and migrated.defenses_completed == 0 and migrated.weapon_level == 0,
+	_expect(migrated.version == SaveSystem.VERSION and migrated.defenses_completed == 0 and migrated.weapon_level == 0,
 		"v1 passes through both schema migrations to v3")
 	_expect(migrated.player == v1.player and migrated.resources == v1.resources and migrated.expeditions_completed == 9,
 		"v1 migration preserves all original progress")

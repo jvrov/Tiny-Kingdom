@@ -4,7 +4,7 @@ Tiny Kingdom é um RPG 2D mobile em pixel art que mistura exploração, combate,
 
 **Explore → Fight → Loot → Upgrade → Defend → Expand**
 
-**Status: Fases 1 a 3.5 implementadas — exploração, construções e defesa da vila em cinco ondas.** A versão atual usa formas desenhadas pelo Godot, sem sprites externos.
+**Status: Fases 1 a 4 implementadas — exploração, construções, defesa, inventário, equipamentos e loot.** A versão atual usa formas desenhadas pelo Godot, sem sprites externos.
 
 ## Tecnologias e requisitos
 
@@ -38,6 +38,8 @@ No Windows, use o caminho do executável se necessário. No macOS, ele fica em `
 | Confirmar construção/melhoria/defesa | **Enter** ou botão do painel |
 | Fechar painel | **Esc** ou Cancelar/Fechar |
 | Ataque | Automático contra o inimigo mais próximo dentro do alcance |
+| Inventário | **I** para abrir/fechar, **Esc** para fechar |
+| Gerar loot para testes | **F8**, somente editor/debug |
 | Reset de desenvolvimento | **F9**, seguido de confirmação explícita |
 
 F9 funciona no editor/binário de desenvolvimento e em exportações debug. É ignorado em exportações release. A confirmação pausa o jogo; cancelar não altera o progresso. **R não reinicia mais a partida**, para evitar apagar ou abandonar o progresso acidentalmente. O input continua preparado para joystick e botão de interação mobile.
@@ -108,19 +110,42 @@ Cada defesa concluída aumenta a vida dos invasores em **5%** e o dano em **3%**
 
 Durante a preparação, ondas e intervalos, não é possível sair em expedição, depositar, construir, melhorar arma ou iniciar outra defesa. F9 continua sendo um reset de desenvolvimento com confirmação; ele cancela a batalha e apaga o progresso conforme indicado.
 
+## Inventário, equipamentos e loot — Fase 4
+
+Pressione **I** para abrir o inventário de **20 espaços**. A tela pausa o jogo, inclusive durante a defesa. Selecione um item e clique em **Equipar**, **Usar poção** ou **Descartar**. O descarte pede confirmação e remove a pilha inteira. Clique em um equipamento atual para desequipá-lo; **I/Esc** fecha a tela.
+
+Há três slots: **Arma**, **Armadura** e **Botas**. Equipamentos ocupam um espaço cada; uma troca devolve o equipamento antigo ao espaço do item escolhido, funcionando mesmo com a mochila cheia. Desequipar exige um espaço livre.
+
+| Raridade | Chance no sorteio de equipamento | Arma / dano | Armadura / HP máximo | Botas / velocidade |
+| --- | --- | --- | --- | --- |
+| Comum | 60% | Espada Enferrujada / +2 | Roupa de Viajante / +10 | Botas Gastas / +5 |
+| Incomum | 25% | Espada de Ferro / +5 | Armadura de Couro / +20 | Botas do Explorador / +10 |
+| Raro | 12% | Espada do Cavaleiro / +9 | Armadura de Ferro / +35 | Botas do Caçador / +15 |
+| Épico | 3% | Lâmina Real / +15 | Armadura Real / +55 | Botas Reais / +25 |
+
+A **Poção de Vida** cura **40 HP**, limitada à vida máxima, com até **5 por espaço**. Ela não é consumida com vida cheia. Equipar armadura aumenta o máximo sem curar; removê-la limita a vida atual ao novo máximo.
+
+Cada inimigo de expedição tem **25%** de chance de derrubar equipamento e, independentemente, **12%** de derrubar poção. A categoria do equipamento é sorteada igualmente entre arma/armadura/botas após a raridade. Drops aparecem no chão com nome, cor de raridade e símbolo. **Encoste para coletar** (alcance de 30 px). Com mochila cheia ou falha de gravação, o item permanece no chão para tentar novamente.
+
+Itens coletados e equipamentos são permanentes, inclusive após morrer. Madeira/pedra/ouro continuam separados e seguem as regras anteriores de carga/depósito. Invasores da defesa não derrubam itens. Drops não coletados desaparecem ao trocar de mapa ou fechar o jogo.
+
+O dano é **base + bônus de nível + Ferreiro + equipamento**. HP e velocidade também têm suas contribuições separadas, exibidas no inventário. Por exemplo: 18 base + 8 nível + 7 Ferreiro + 9 espada = **42**. Salvar/carregar nunca incorpora equipamento ao valor permanente. Coleta, troca, descarte e consumo gravam primeiro; falhas não removem itens nem concedem cura.
+
+**F8** gera equipamento aleatório ou poção ao lado do jogador, exclusivamente em editor/debug e fora de defesas. Para testar: F8 → encostar no drop → I → selecionar → Equipar. O jogo também mantém os drops normais das expedições.
+
 ## Salvamento local
 
-O save **JSON versão 3** é criado automaticamente em **`user://save.json`**. Ele armazena madeira/pedra/ouro depositados, nível, XP, vida máxima, dano total, expedições concluídas, níveis/posições das construções, nível da arma e defesas concluídas.
+O save **JSON versão 4** é criado automaticamente em **`user://save.json`**. Ele armazena madeira/pedra/ouro depositados, nível, XP, vida máxima e dano permanentes (sem equipamento), expedições concluídas, níveis/posições das construções, nível da arma, defesas concluídas, inventário, equipamentos e bases dos atributos.
 
 - XP e atributos são salvos quando a progressão muda; depósitos e retornos também salvam.
 - Recursos carregados existem somente na memória. **Fechar o jogo antes de depositar também perde a carga**, mesmo se você já tiver retornado à vila. Ao reabrir, você sempre começa na vila.
 - A gravação usa um arquivo temporário seguido de renomeação. Se o depósito não puder ser salvo, a transferência é desfeita e a carga permanece com o jogador. A HUD informa a falha.
 - JSON inválido ou dados fora do formato geram um backup `save.json.corrupt-*` e um novo save padrão. Se o backup não puder ser criado, a gravação fica bloqueada para preservar o arquivo.
-- Saves v1 e v2 válidos são migrados automaticamente para v3. Recursos, atributos e expedições são preservados. V1 recebe construções/arma no nível 0; v2 mantém seus prédios, posições e melhorias. Ambos recebem `defenses_completed: 0`. O original é copiado para `save.json.v1-*.bak` ou `save.json.v2-*.bak` antes da gravação. Falhas de backup/gravação preservam o original.
+- Saves v1, v2 e v3 válidos migram automaticamente para v4. Recursos, atributos, construções, Ferreiro e contadores existentes são preservados; inventário/equipamentos começam vazios. Bases dos atributos são calculadas a partir dos totais antigos, preservando inclusive valores personalizados. O original recebe backup `save.json.v1-*.bak`, `.v2-*.bak` ou `.v3-*.bak` antes da gravação. Falhas de backup/gravação preservam o original.
 - Ondas, HP estrutural, inimigos e respawn não são salvos. Fechar durante uma batalha a abandona sem recompensa; ao reabrir, a vila está restaurada. XP já salvo permanece.
-- O dano salvo já inclui o bônus da arma. Carregar o save atribui esse total, sem somar o bônus novamente.
+- O campo de dano permanente inclui nível e Ferreiro; equipamento é reconstruído a partir de IDs estáveis. Carregar não soma nenhum bônus duas vezes.
 - Uma versão de save desconhecida é preservada, com aviso e gravação bloqueada.
-- **F9 + confirmação** apaga o save atual, restaura os valores padrão e cria um novo save. Construções e melhorias também são resetadas; backups de migração e corrupção são mantidos.
+- **F9 + confirmação** apaga o save atual, restaura os valores padrão e cria um novo save. Construções, melhorias, inventário e equipamentos também são resetados; backups de migração e corrupção são mantidos.
 
 Localização padrão:
 
@@ -144,14 +169,16 @@ Tiny-Kingdom/
 │   ├── enemies/Enemy.tscn
 │   ├── world/{World,Village}.tscn
 │   ├── buildings/{Building,ArcherTower}.tscn
-│   └── ui/{HUD,BuildingPanel}.tscn
+│   ├── items/WorldItem.tscn
+│   └── ui/{HUD,BuildingPanel,InventoryPanel}.tscn
 ├── scripts/
 │   ├── player/{player,movement_input,interaction_controller}.gd
 │   ├── enemies/enemy.gd
 │   ├── systems/{main,world,village,interactable,game_state,save_system,wave_manager}.gd
 │   ├── buildings/{building_data,building,archer_tower}.gd
-│   └── ui/{hud,building_panel}.gd
-├── tests/{smoke_test,progression_test,building_test,defense_test,persistence_probe}.gd
+│   ├── items/{item_data,inventory_data,attribute_stats,world_item}.gd
+│   └── ui/{hud,building_panel,inventory_panel}.gd
+├── tests/{smoke_test,progression_test,building_test,defense_test,inventory_test,persistence_probe}.gd
 ├── docs/{DEVELOPMENT,ROADMAP}.md
 ├── project.godot
 └── .gitignore
@@ -173,6 +200,7 @@ godot --headless --path . --script res://tests/smoke_test.gd --fixed-fps 60
 godot --headless --path . --script res://tests/progression_test.gd --fixed-fps 60
 godot --headless --path . --script res://tests/building_test.gd --fixed-fps 60
 godot --headless --path . --script res://tests/defense_test.gd --fixed-fps 60
+godot --headless --path . --script res://tests/inventory_test.gd --fixed-fps 60
 godot --headless --path . --quit-after 180 --fixed-fps 60
 ```
 
@@ -180,14 +208,15 @@ godot --headless --path . --quit-after 180 --fixed-fps 60
 - `progression_test.gd`: arquivos reais, validação/corrupção, falha de gravação, depósito, transições, morte e reset. Também inicia **outro processo do Godot** para verificar a reabertura do progresso.
 - `building_test.gd`: migração v1 → versão atual, custos, pré-requisitos, UI, falhas de gravação, melhorias, Torre e reabertura em processos separados.
 - `defense_test.gd`: migrações v1/v2 → v3, ondas, spawn, IA, HP estrutural, Torre, respawn, bloqueios, vitória/derrota, recompensa, falha de gravação, escalonamento, reset e reabertura.
-- **330 verificações: 57 de combate + 77 de progressão + 85 de construções + 111 de defesa.**
-- As quatro suítes usam arquivos exclusivos em `user://tests/`, sem tocar no save do jogador. `persistence_probe.gd` é um auxiliar chamado pela suíte, não um comando separado de teste.
+- `inventory_test.gd`: catálogo, probabilidades, drops, coleta, UI, trocas, poções, mochila cheia, falhas de gravação, morte, integração com defesa, migrações v1/v2/v3 → v4 e reabertura em processos novos.
+- **450 verificações: 57 de combate + 77 de progressão + 85 de construções + 111 de defesa + 120 de inventário.**
+- As cinco suítes usam arquivos exclusivos em `user://tests/`, sem tocar no save do jogador. `persistence_probe.gd` é um auxiliar chamado pela suíte, não um comando separado de teste.
 - Os testes imprimem os totais e retornam código diferente de zero em caso de falha. O comando final é uma inicialização real da vila e pode criar o save padrão se ele não existir.
 
 ## Limitações e próximos passos
 
-A vila possui praça, depósito, portal e três construções fixas. Ainda não há posicionamento livre, casas, muralhas, dano estrutural persistente, crafting, equipamentos, NPCs complexos, quests, multiplayer ou backend. Árvores e pedras são decorativas; inimigos usam perseguição direta, sem navegação por obstáculos. A defesa usa um único tipo de invasor; não há indicadores de inimigos fora da tela. O balanceamento inicial ainda precisa de sessões mais longas com jogadores. O mapa de exploração é fixo e renova os inimigos a cada saída.
+A vila possui praça, depósito, portal e três construções fixas. Ainda não há posicionamento livre, casas, muralhas, dano estrutural persistente, crafting, lojas, durabilidade, NPCs complexos, quests, multiplayer ou backend. Árvores e pedras são decorativas; inimigos usam perseguição direta, sem navegação por obstáculos. A defesa usa um único tipo de invasor; não há indicadores de inimigos fora da tela. O balanceamento inicial ainda precisa de sessões mais longas com jogadores. O mapa de exploração é fixo e renova os inimigos a cada saída.
 
 O save tem um único slot local, sem nuvem ou sincronização entre dispositivos. O progresso temporário da expedição não é retomado após fechar. Joystick visual, áudio, pixel art final e exportação Android permanecem pendentes.
 
-Próxima etapa recomendada: **Fase 4 — Inventário e equipamentos**, começando por um inventário simples com persistência. Consulte [ROADMAP.md](docs/ROADMAP.md).
+Próxima etapa recomendada: **Fase 5 — Habilidades**, começando com uma habilidade ativa e uma passiva. Consulte [ROADMAP.md](docs/ROADMAP.md).

@@ -66,9 +66,15 @@ Limitações: um tipo de invasor, sem dano estrutural persistente ou retomada da
 ## Fase 4 — Inventário e equipamentos
 
 - [x] Contadores básicos de madeira, pedra e ouro.
-- [ ] Coleta física, inventário de itens e interface.
-- [ ] Armas, armaduras, atributos e raridades.
-- [ ] Persistência dos itens e equipamentos.
+- [x] Coleta automática de loot físico e inventário de 20 slots com interface por I.
+- [x] Armas, armaduras e botas em quatro raridades; 12 equipamentos e poção de vida.
+- [x] Equipar/trocar/desequipar, descarte confirmado e poções em pilhas de cinco.
+- [x] Bases, nível, Ferreiro e equipamentos separados no cálculo de atributos.
+- [x] Itens mantidos após morte; defesa sem drops; F8 exclusivo de debug.
+- [x] Save v4 com migrações v1/v2/v3 e transações seguras para itens.
+- [x] 330 verificações anteriores e 120 novas; revisão visual e input de coleta/equipamento.
+
+Crafting, lojas, durabilidade e drag-and-drop permanecem fora desta fase.
 
 ## Fase 5 — Skills
 

@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/ui/building_panel.gd" id="1"]
 
 [node name="BuildingPanel" type="Control"]
+visible = false
 process_mode = 3
 layout_mode = 3
 anchors_preset = 15

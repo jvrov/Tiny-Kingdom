@@ -31,7 +31,21 @@ func _run() -> void:
 	for key in ["level", "xp", "max_health", "damage"]:
 		matches = matches and actual.player[key] == expected.player[key]
 	matches = matches and main.in_village and main.player.level == expected.player.level
-	matches = matches and main.player.damage == expected.player.damage
+	var bonuses := InventoryData.bonuses(expected.equipment)
+	# JSON numbers are floats; compare quantities numerically, not container types.
+	matches = matches and actual.inventory.size() == expected.inventory.size()
+	for index in range(actual.inventory.size()):
+		var entry: Dictionary = actual.inventory[index]
+		var wanted: Dictionary = expected.inventory[index]
+		matches = matches and entry.is_empty() == wanted.is_empty()
+		if not entry.is_empty() and not wanted.is_empty():
+			matches = matches and entry.id == wanted.id and entry.quantity == wanted.quantity
+	matches = matches and actual.equipment == expected.equipment
+	for key in actual.attribute_base:
+		matches = matches and actual.attribute_base[key] == expected.attribute_base[key]
+	matches = matches and main.player.damage == expected.player.damage + bonuses.damage
+	matches = matches and main.player.max_health == expected.player.max_health + bonuses.max_health
+	matches = matches and main.player.speed == expected.attribute_base.speed + bonuses.speed
 	matches = matches and actual.weapon_level == expected.weapon_level
 	for id in BuildingData.IDS:
 		matches = matches and actual.buildings[id].level == expected.buildings[id].level

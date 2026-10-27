@@ -2,6 +2,7 @@ class_name KingdomEnemy
 extends CharacterBody2D
 
 signal defeated
+signal loot_dropped(id: String, point: Vector2)
 
 @export var speed: float = 92.0
 @export var max_health: int = 36
@@ -16,6 +17,9 @@ signal defeated
 var current_health: int
 var target: Node2D
 var invading := false
+var loot_enabled := false
+@export_range(0.0, 1.0) var equipment_drop_chance := 0.25
+@export_range(0.0, 1.0) var potion_drop_chance := 0.12
 var defended_hall: VillageBuilding
 var defending_player: KingdomPlayer
 var _dead := false
@@ -73,6 +77,10 @@ func take_damage(amount: int, source: KingdomPlayer = null) -> void:
 				var kinds := ["wood", "stone", "gold"]
 				source.add_resource(kinds[_rng.randi_range(0, kinds.size() - 1)],
 					_rng.randi_range(1, 3))
+		if loot_enabled and not invading:
+			var drops := ItemData.roll_loot(_rng, equipment_drop_chance, potion_drop_chance)
+			for index in range(drops.size()):
+				loot_dropped.emit(drops[index], global_position + Vector2(index * 36, 0))
 		defeated.emit()
 		queue_free()
 	queue_redraw()

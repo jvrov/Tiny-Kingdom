@@ -12,6 +12,8 @@ signal died
 @export var attack_range: float = 115.0
 @export var attack_cooldown: float = 0.65
 
+var equipment_bonuses := {"damage": 0, "max_health": 0, "speed": 0}
+var base_speed := 230.0
 var current_health: int
 var experience: int = 0
 var level: int = 1
@@ -29,8 +31,9 @@ var _facing := Vector2.RIGHT
 func apply_progress(progress: Dictionary, cargo: Dictionary) -> void:
 	level = progress.level
 	experience = progress.xp
-	max_health = progress.max_health
-	damage = progress.damage
+	max_health = progress.max_health + equipment_bonuses.max_health
+	damage = progress.damage + equipment_bonuses.damage
+	speed = base_speed + equipment_bonuses.speed
 	resources = cargo.duplicate()
 	current_health = max_health
 	velocity = Vector2.ZERO
@@ -148,3 +151,16 @@ func _draw() -> void:
 		draw_line(Vector2.ZERO, _attack_point, Color(1.0, 0.9, 0.55, alpha), 5, true)
 		draw_arc(_attack_point, 12 + (1 - alpha) * 14, 0, TAU, 24,
 			Color(1.0, 0.94, 0.7, alpha), 3, true)
+
+
+func apply_equipment(progress: Dictionary, equipped: Dictionary, permanent_speed: float) -> void:
+	level = progress.level
+	experience = progress.xp
+	equipment_bonuses = InventoryData.bonuses(equipped)
+	base_speed = permanent_speed
+	damage = progress.damage + equipment_bonuses.damage
+	max_health = progress.max_health + equipment_bonuses.max_health
+	speed = base_speed + equipment_bonuses.speed
+	# Swapping armor never heals or resurrects.
+	current_health = mini(current_health, max_health)
+	stats_changed.emit()

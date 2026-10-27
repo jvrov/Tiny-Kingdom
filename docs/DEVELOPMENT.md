@@ -10,7 +10,7 @@
 - `Village` desenha praça, depósito e portal; as três cenas de construções desenham os terrenos/prédios. O mapa de exploração preserva combate, paredes e cenário, com um novo ponto de retorno.
 - `HUD` acompanha sinais do jogador/estado, distingue estoque/carga, mostra interação e falhas de save. O reset exige confirmação e pausa o jogo enquanto o diálogo está aberto.
 
-Grupos: `player`, `enemies`, `interactables`, `buildings`. Camadas físicas: **1 mundo**, **2 jogador**, **3 inimigos**. Só os limites dos mapas e os personagens têm colisão; os objetos de interação e a decoração não bloqueiam o movimento.
+Grupos: `player`, `enemies`, `interactables`, `buildings`, `world_items`. Camadas físicas: **1 mundo**, **2 jogador**, **3 inimigos**. Só os limites dos mapas e os personagens têm colisão; os objetos de interação e a decoração não bloqueiam o movimento.
 
 ## Construções e economia
 
@@ -19,7 +19,7 @@ Grupos: `player`, `enemies`, `interactables`, `buildings`. Camadas físicas: **1
 - `BuildingPanel` exibe a oferta central calculada pelo estado, pausa a árvore e emite a intenção de compra. Não movimenta recursos. Botões, Enter e Esc permitem uso desktop e futura ligação com touch.
 - `Main` valida mapa, vida e distância antes de encaminhar a compra. `GameState` concentra `can_afford`, `spend_resources`, `building_offer`, `purchase_building` e a transação privada `_commit_economy`. Uma oferta inclui o nível esperado, impedindo cobrança duplicada de uma confirmação antiga.
 - A transação desconta recursos e aplica a evolução em uma cópia. Somente após salvar com sucesso essa cópia substitui o estado permanente e emite sinais. Na falha, nada é aplicado ao estoque, prédio ou jogador.
-- O save guarda dano total e nível da arma separadamente. Cada compra soma somente a diferença entre bônus acumulados; `weapon_upgraded` faz o jogador receber o total atualizado. Carregamentos nunca somam o bônus outra vez.
+- O save guarda dano permanente, bases dos atributos e nível do Ferreiro separadamente. A compra recalcula o valor permanente; `weapon_upgraded` aplica o total mais equipamento ao jogador, sem acumular bônus.
 - A Torre só funciona construída e com HP positivo. Reutiliza a mesma seleção de alvo e ataque na defesa; abates sem fonte não concedem XP/carga.
 
 ## Defesa e WaveManager
@@ -40,15 +40,29 @@ A morte do jogador durante defesa inicia um relógio de cinco segundos no coorde
 
 A vitória solicita `GameState.commit_defense_reward()`: soma recursos e contador em uma cópia, grava e só então aplica. A elegibilidade é consumida antes de emitir sinais, impedindo recompensa duplicada por chamadas reentrantes. Falha mantém pendência na sessão e oferece nova tentativa na bandeira, bloqueando partida/nova defesa. Fechar o processo abandona batalha ou recompensa ainda não gravada. Derrota não faz transação de recompensa.
 
+## Itens e atributos
+
+`ItemData` define 13 IDs estáveis, categoria, raridade, atributos, descrição e símbolo. `InventoryData` fornece operações puras sobre 20 espaços fixos (`{}` vazio ou `{id, quantity}`) e bônus dos três slots. Esses dados não guardam nodes/Resources.
+
+`GameState` é dono de `inventory`, `equipment` e `attribute_base`. `collect_item` e `inventory_action` criam cópias, validam e salvam antes de aplicar. Troca reutiliza o espaço selecionado; desequipar verifica capacidade; pilhas transbordam atomicamente. Poção só cura após remover uma unidade com sucesso. Nenhuma operação de inventário altera madeira/pedra/ouro.
+
+`AttributeStats` calcula bases + bônus de nível + Ferreiro + equipamento. `progression.damage/max_health` continuam representando apenas valores permanentes. `Player.apply_equipment` atribui totais e limita HP atual sem curar; `sync_player` subtrai bônus de equipamento ao persistir. Level-up ainda soma +4 dano/+15 HP. Reset limpa bônus antes da restauração por WaveManager.
+
+`Enemy.loot_dropped` só é ligado por Main em expedições. Um inimigo não invasor habilitado sorteia 25% equipamento e 12% poção independentemente; a proteção de morte impede drops repetidos. `WorldItem` recebe um ID e tenta coleta por proximidade. Falha mantém o drop e limita tentativas a cada dois segundos. O nó `Drops` é limpo nas transições; itens no chão não persistem.
+
+`InventoryPanel` constrói a grade e encaminha comandos ao estado. I/Esc e botões operam sem drag-and-drop. O painel pausa também defesas, impede abertura enquanto morto/transicionando e evita sobreposição com os outros modais. Descarte usa confirmação com cópia do item selecionado. F8 está protegido por `OS.is_debug_build()`; builds release não geram itens por esse atalho.
+
 ## Contrato de persistência
 
-O formato v3 contém `version`, `resources`, `player` (nível, XP, vida máxima, dano) e `expeditions_completed`, além de `buildings` (nível e posição por ID) `weapon_level` e `defenses_completed`. As posições fixas, limites e dependências entre prédios/arma também são validados. Não contém vida atual, posição, inimigos, mapa ativo ou recursos carregados. Um novo processo sempre inicia na vila, com vida cheia e carga vazia.
+O formato v4 contém `version`, `resources`, `player` (nível, XP, vida máxima, dano) e `expeditions_completed`, além de `buildings` (nível e posição por ID) `weapon_level`, `defenses_completed`, `inventory`, `equipment` e `attribute_base`. As posições fixas, limites e dependências entre prédios/arma também são validados. Não contém vida atual, posição, inimigos, mapa ativo ou recursos carregados. Um novo processo sempre inicia na vila, com vida cheia e carga vazia.
 
 A progressão salva imediatamente quando XP/atributos mudam. Cada retorno vivo incrementa o contador uma vez; uma morte não incrementa. Limpar todos os inimigos só conclui o objetivo de combate: o jogador ainda precisa voltar ao marco e interagir.
 
 O depósito soma os recursos ao estoque e tenta gravar o snapshot permanente. Só depois de uma gravação bem-sucedida ele limpa a carga; na falha, restaura o estoque anterior e permite nova tentativa. Gravações usam `save.json.tmp`, flush e renomeação para preservar o arquivo anterior em falhas comuns. Isso não é uma garantia contra toda falha física de armazenamento, nem um sistema de múltiplos escritores.
 
-Saves v1 e v2 válidos migram para v3: a etapa v1 adiciona prédios/arma padrão; a etapa v2 adiciona defesas concluídas em zero. Os demais campos são preservados integralmente, incluindo o dano total. O original é copiado para `.v1-*.bak` ou `.v2-*.bak` antes de gravar v3. Falha no backup bloqueia gravações; falha ao salvar mantém o original para tentar novamente na próxima inicialização.
+Saves v1/v2/v3 válidos migram para v4 com inventário/equipamento vazios. V1 recebe também os prédios padrão; v1/v2 recebem contador de defesas zero. O dano base é o total legado menos bônus de nível/Ferreiro, e HP base é o total menos nível. Bases podem incluir ajustes legados para preservar qualquer total antes válido. O original recebe backup `.v1-*.bak`, `.v2-*.bak` ou `.v3-*.bak`. Falha de backup bloqueia gravação; falha de gravação mantém o original.
+
+V4 valida quantidade de slots, IDs existentes, inteiros positivos, limites de pilhas, tipo de cada equipamento e consistência das bases com os totais permanentes. Números de JSON são normalizados ao carregar. O probe compara quantidades numericamente, pois JSON representa números como floats.
 
 Arquivos corrompidos são copiados para `.corrupt-*` antes de substituir por valores padrão. Saves de versões desconhecidas são preservados e não recebem gravações. Falhas ficam visíveis na HUD. O reset explícito de desenvolvimento pode remover o slot e criar valores padrão; backups de corrupção e migração não são apagados.
 
@@ -76,7 +90,7 @@ A intensidade analógica é preservada e o comprimento limitado a 1. Input virtu
 
 Atributos do jogador e inimigos continuam expostos por `@export`. `ENEMY_POSITIONS` em `main.gd` define a população fixa. `move_and_slide()` já aplica delta à velocidade em pixels/segundo; cooldowns usam o delta da física.
 
-Os testes de regressão foram mantidos e adaptados ao novo contrato: morte retorna à vila com progresso, em vez de reiniciar tudo; vitória orienta o retorno em vez de encerrar a cena. `progression_test.gd` cobre arquivos reais, transações, corrupção, transições, reset e reabertura em processo separado. `building_test.gd` acrescenta 85 verificações de construções, economia, UI, migração e defesa, totalizando 219 com as 134 anteriores. `defense_test.gd` acrescenta 111 verificações, totalizando 330. Usa relógios controlados para percorrer as 48 instâncias das cinco ondas e física real para IA/dano, além de falhas de arquivo reais. O auxiliar `persistence_probe.gd` verifica também prédios, posições, nível da arma, dano e defesas concluídas em processos novos, sem restaurar batalhas ou duplicar recompensas. Cada suíte seleciona um caminho exclusivo `user://tests/` antes de instanciar `Main` e apaga somente seus próprios arquivos ao terminar. Uma execução interrompida pode deixar fixtures nessa pasta, sem afetar `save.json`.
+Os testes de regressão foram mantidos e adaptados ao novo contrato: morte retorna à vila com progresso, em vez de reiniciar tudo; vitória orienta o retorno em vez de encerrar a cena. `progression_test.gd` cobre arquivos reais, transações, corrupção, transições, reset e reabertura em processo separado. `building_test.gd` acrescenta 85 verificações de construções, economia, UI, migração e defesa, totalizando 219 com as 134 anteriores. `defense_test.gd` acrescenta 111 verificações, totalizando 330. `inventory_test.gd` acrescenta 120, chegando a 450 verificações. Usa relógios controlados para percorrer as 48 instâncias das cinco ondas e física real para IA/dano, além de falhas de arquivo reais. O auxiliar `persistence_probe.gd` verifica também prédios, posições, nível da arma, dano e defesas concluídas em processos novos, sem restaurar batalhas ou duplicar recompensas. Cada suíte seleciona um caminho exclusivo `user://tests/` antes de instanciar `Main` e apaga somente seus próprios arquivos ao terminar. Uma execução interrompida pode deixar fixtures nessa pasta, sem afetar `save.json`.
 
 ## Ambiente na nuvem
 
@@ -93,6 +107,7 @@ godot --headless --path . --script res://tests/smoke_test.gd --fixed-fps 60
 godot --headless --path . --script res://tests/progression_test.gd --fixed-fps 60
 godot --headless --path . --script res://tests/building_test.gd --fixed-fps 60
 godot --headless --path . --script res://tests/defense_test.gd --fixed-fps 60
+godot --headless --path . --script res://tests/inventory_test.gd --fixed-fps 60
 godot --headless --path . --quit-after 180 --fixed-fps 60
 ```
 

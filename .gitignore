@@ -18,6 +18,7 @@ save.json
 save.json.corrupt-*
 save.json.v1-*.bak
 save.json.v2-*.bak
+save.json.v3-*.bak
 
 # OS/editor files.
 .DS_Store

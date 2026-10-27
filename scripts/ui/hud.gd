@@ -22,6 +22,7 @@ var in_village := true
 @onready var result_panel: PanelContainer = %ResultPanel
 @onready var result_title: Label = %ResultTitle
 @onready var result_description: Label = %ResultDescription
+@onready var inventory_panel: InventoryPanel = %InventoryPanel
 @onready var building_panel: BuildingPanel = %BuildingPanel
 
 
@@ -46,9 +47,9 @@ func _ready() -> void:
 	game_state.changed.connect(refresh)
 	game_state.save_status_changed.connect(_on_save_status)
 	_on_save_status(game_state.save_status)
-	%Hint.text = "WASD / SETAS   mover     ·     E   interagir     ·     ATAQUE AUTOMÁTICO"
+	%Hint.text = "WASD / SETAS   mover     ·     E   interagir     ·     I   inventário     ·     ATAQUE AUTOMÁTICO"
 	if OS.is_debug_build():
-		%Hint.text += "     ·     F9   reset (dev)"
+		%Hint.text += "     ·     F8   loot / F9   reset (dev)"
 
 
 func bind_player(value: KingdomPlayer) -> void:
@@ -86,7 +87,7 @@ func update_objective(remaining: int, total: int) -> void:
 
 func show_failure() -> void:
 	result_title.text = "Expedição falhou"
-	result_description.text = "Recursos não depositados foram perdidos.\nNível e XP foram mantidos.\nRetornando à vila…"
+	result_description.text = "Recursos não depositados foram perdidos.\nNível, XP e itens foram mantidos.\nRetornando à vila…"
 	result_panel.show()
 
 
@@ -111,7 +112,7 @@ func _on_save_status(text: String) -> void:
 
 
 func confirm_reset() -> void:
-	if OS.is_debug_build() and not %ResetConfirmation.visible and not building_panel.visible and not %DefenseConfirmation.visible:
+	if OS.is_debug_build() and not %ResetConfirmation.visible and not building_panel.visible and not %DefenseConfirmation.visible and not inventory_panel.visible:
 		get_tree().paused = true
 		%ResetConfirmation.popup_centered()
 

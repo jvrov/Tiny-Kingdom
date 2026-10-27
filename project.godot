@@ -47,6 +47,15 @@ debug_reset={
 "events": [Object(InputEventKey,"physical_keycode":4194340)]
 }
 
+inventory={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":73)]
+}
+debug_loot={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194339)]
+}
+
 [layer_names]
 2d_physics/layer_1="World"
 2d_physics/layer_2="Player"
